@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+export PORT=9000
+export HTTP_PORT=$PORT
+export NODE_ENV=production
+export FORCE_CLOUD_FUNCTION=true
+export PATH="/var/lang/node18/bin:$PATH"
+export STATIC_DIR=/var/user/web-dist
+
+cd /var/user
+
+
+
+exec node dist/index.js

@@ -1,0 +1,77 @@
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+src/.env
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Generated visualization reports
+visualization-reports/
+
+# Temporary test files
+test-*.js
+test-*.ts
+
+# MCP specific
+mcp-server.log
+
+# Frontend build (Scheme B) and legacy paths
+web-dist/
+web/dist/
+
+# Archives
+*.zip
+*.tar.gz
+
+# Backup files
+*.bak
+
+# Project scripts (ignored)
+scripts/
+.claude/settings.local.json
+
+# Local environment variables (actual env files should never be committed)
+.env
+.env.local
+.env.*.local
+web/.env
+web/.env.local
+web/.env.*.local

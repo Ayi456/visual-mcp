@@ -1,0 +1,64 @@
+{
+  "name": "visualization-chart",
+  "version": "1.1.0",
+  "description": "Universal MCP server for data visualization and panel link management with Redis+MySQL architecture",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "build:watch": "tsc --watch",
+    "demo": "node demo-panel-manager.js",
+    "clean": "node scripts/clean.cjs",
+    "rebuild": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "data-visualization",
+    "chart",
+    "visualization",
+    "universal",
+    "intelligent",
+    "panel-manager",
+    "link-management",
+    "redis",
+    "mysql",
+    "oss"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.3",
+    "@types/node-fetch": "^2.6.13",
+    "@types/pg": "^8.15.5",
+    "ali-oss": "^6.23.0",
+    "argon2": "^0.41.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "mysql2": "^3.15.0",
+    "node-fetch": "^2.7.0",
+    "pg": "^8.16.3",
+    "pino": "^9.9.5",
+    "pino-pretty": "^13.1.1",
+    "rate-limiter-flexible": "^7.3.1",
+    "redis": "^5.6.1",
+    "tencentcloud-sdk-nodejs-sms": "^4.1.71",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/ali-oss": "^6.16.11",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.14",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
