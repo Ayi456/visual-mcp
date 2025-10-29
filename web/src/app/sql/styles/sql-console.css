@@ -1,0 +1,194 @@
+/* SQL Console 主样式文�?*/
+
+.sql-console {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+
+.connection-sidebar {
+  min-width: 240px;
+  max-width: 320px;
+  resize: horizontal;
+  overflow: auto;
+}
+
+.connection-item {
+  @apply p-2 rounded cursor-pointer transition-colors;
+}
+
+.connection-item:hover {
+  @apply bg-gray-100 dark:bg-gray-700;
+}
+
+.connection-item.active {
+  @apply bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-500;
+}
+
+/* 对话视图样式 */
+.conversation-view {
+  @apply flex flex-col h-full w-full;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.message-list {
+  @apply p-4 space-y-4;
+  min-height: 0;
+}
+
+.message-item {
+  @apply flex gap-3;
+}
+
+.message-item.user {
+  @apply justify-end;
+}
+
+.message-item.assistant {
+  @apply justify-start;
+}
+
+.message-bubble {
+  @apply inline-block w-fit max-w-[70%] rounded-2xl px-4 py-2 break-words shadow-sm;
+}
+
+.message-bubble.user {
+  @apply bg-blue-500 text-white ml-auto shadow-md;
+}
+
+.message-bubble.assistant {
+  @apply bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 mr-auto shadow;
+}
+
+.role-badge{ @apply inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300; }
+.role-badge.user{ @apply bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300; }
+.role-badge.assistant{ @apply bg-gray-100 dark:bg-gray-700; }
+
+/* SQL 代码块样�?*/
+.sql-code-block {
+  @apply font-mono text-sm bg-gray-900 text-gray-100 rounded p-3 my-2 overflow-x-auto;
+}
+
+.sql-code-block .sql-token-keyword {
+  @apply text-blue-400 font-semibold;
+}
+
+.sql-code-block .sql-token-string {
+  @apply text-green-400;
+}
+
+.sql-code-block .sql-token-number {
+  @apply text-yellow-400;
+}
+
+.sql-code-block .sql-token-comment {
+  @apply text-gray-500 italic;
+}
+
+/* 输入区域样式 */
+.message-input-container {
+  @apply border-t border-gray-200 dark:border-gray-700 p-4;
+}
+
+.message-input {
+  @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100;
+}
+
+/* 执行结果视图样式 */
+.execution-view {
+  @apply flex flex-col h-full;
+  min-height: 0;
+  position: relative;
+}
+
+.result-tabs {
+  @apply flex border-b border-gray-200 dark:border-gray-700;
+}
+
+.result-tab {
+  @apply px-4 py-2 cursor-pointer transition-colors;
+  @apply hover:bg-gray-100 dark:hover:bg-gray-700;
+}
+
+.result-tab.active {
+  @apply border-b-2 border-blue-500 bg-white dark:bg-gray-800;
+}
+
+/* 数据表格样式 */
+.data-table {
+  @apply w-full overflow-auto;
+}
+
+.data-table table {
+  @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+}
+
+.data-table thead {
+  @apply bg-gray-50 dark:bg-gray-800;
+}
+
+.data-table th {
+  @apply px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider;
+}
+
+.data-table td {
+  @apply px-4 py-2 text-sm text-gray-900 dark:text-gray-100;
+}
+
+.data-table tbody tr {
+  @apply hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors;
+}
+
+
+.schema-tree {
+  @apply text-sm;
+}
+
+.schema-node {
+  @apply py-1 px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors;
+}
+
+.schema-node.expanded::before {
+  content: '\25BE';
+  @apply inline-block w-4 text-gray-500;
+}
+
+.schema-node.collapsed::before {
+  content: '\25B8';
+  @apply inline-block w-4 text-gray-500;
+}
+
+.schema-node.leaf::before {
+  content: '\2022';
+  @apply inline-block w-4 text-gray-400;
+}
+
+
+
+@media (max-width: 768px) {
+  .connection-sidebar {
+    display: none;
+  }
+
+  .message-bubble {
+    max-width: 85%;
+  }
+}
+
+/* Toast 提示动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}

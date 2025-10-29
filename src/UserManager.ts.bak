@@ -1,0 +1,732 @@
+import {
+  User,
+  UserInfo,
+  UserQuotaInfo,
+  CreateUserArgs,
+  LoginUserArgs
+} from './types.js';
+import { AuthService, UserService, QuotaService, PasswordResetService } from './services/user/index.js';
+
+/**
+ * 用户管理器（外观模式）
+ * 处理用户注册、登录、配额管理等功能
+ * 将具体实现委托给各个专门的服务类
+ */
+export class UserManager {
+  private authService: AuthService;
+  private userService: UserService;
+  private quotaService: QuotaService;
+  private passwordResetService: PasswordResetService;
+
+  constructor() {
+    this.authService = new AuthService();
+    this.quotaService = new QuotaService();
+    this.userService = new UserService(this.authService, this.quotaService);
+    this.passwordResetService = new PasswordResetService(this.authService);
+  }
+
+  async rotateAccessKey(email: string, password: string): Promise<{ accessKey: string }> {
+    return this.authService.rotateAccessKey(email, password);
+  }
+
+
+
+  async createUser(args: CreateUserArgs): Promise<UserInfo> {
+    return this.userService.createUser(args);
+  }
+
+
+  async loginUser(args: LoginUserArgs): Promise<{ user: UserInfo; accessKey?: string } | null> {
+    return this.authService.loginUser(args);
+  }
+
+  async getUserByAccessId(accessId: string): Promise<User | null> {
+    try {
+      const users = await executeMysqlQuery<User[]>(
+        'SELECT * FROM users WHERE access_id = ? AND status = "active" LIMIT 1',
+        [accessId]
+      );
+
+      return users.length > 0 ? users[0] : null;
+    } catch (error) {
+      throw new Error(`查询用户失败: ${error}`);
+    }
+  }
+
+  async getUserByPhone(phone: string): Promise<User | null> {
+    try {
+      const users = await executeMysqlQuery<User[]>(
+        'SELECT * FROM users WHERE phone = ? LIMIT 1',
+        [phone]
+      );
+
+      return users.length > 0 ? users[0] : null;
+    } catch (error) {
+      throw new Error(`根据手机号查询用户失败: ${error}`);
+    }
+  }
+
+  async verifyAccessKey(accessId: string, accessKey: string): Promise<boolean> {
+    try {
+      const user = await this.getUserByAccessId(accessId);
+      if (!user) {
+        return false;
+      }
+
+      return await this.verifyPassword(accessKey, user.access_key_hash);
+    } catch (error) {
+      throw new Error(`验证AccessKey失败: ${error}`);
+    }
+  }
+
+  async getUserQuota(userId: string): Promise<UserQuotaInfo | null> {
+    try {
+      await this.ensureQuotaWindowFresh(userId);
+      const users = await executeMysqlQuery<User[]>(
+        'SELECT quota_daily, quota_monthly, quota_used_today, quota_used_month, quota_reset_date FROM users WHERE id = ? LIMIT 1',
+        [userId]
+      );
+
+      if (users.length === 0) {
+        return null;
+      }
+
+      const user = users[0];
+
+      return {
+        quota_daily: user.quota_daily,
+        quota_monthly: user.quota_monthly,
+        quota_used_today: user.quota_used_today,
+        quota_used_month: user.quota_used_month,
+        quota_remaining_today: Math.max(0, user.quota_daily - user.quota_used_today),
+        quota_remaining_month: Math.max(0, user.quota_monthly - user.quota_used_month),
+        quota_reset_date: user.quota_reset_date
+      };
+    } catch (error) {
+      throw new Error(`获取用户配额失败: ${error}`);
+    }
+  }
+
+  async validateUserCredentials(accessId: string, accessKey: string): Promise<User | null> {
+    try {
+      if (!accessId || !accessKey) {
+        console.log('缺少凭据:', { hasAccessId: !!accessId, hasAccessKey: !!accessKey });
+        return null;
+      }
+
+      // 清理 accessId 和 accessKey，去除空白字符和换行符
+      const cleanAccessId = accessId.trim();
+      let cleanAccessKey = accessKey.trim().replace(/\s/g, '');
+      // 去除可能包裹的引号
+      cleanAccessKey = cleanAccessKey.replace(/^[\"']+|[\"']+$/g, '');
+      
+      // 验证 AccessKey 格式（应该是 64 个十六进制字符）
+      if (cleanAccessKey.length !== 64) {
+        console.error('AccessKey 长度不正确:', {
+          accessId: cleanAccessId,
+          expectedLength: 64,
+          actualLength: cleanAccessKey.length,
+          rawLength: accessKey.length,
+          first10Chars: cleanAccessKey.substring(0, 10),
+          last10Chars: cleanAccessKey.substring(cleanAccessKey.length - 10)
+        });
+      }
+      
+      // 验证是否为有效的十六进制字符串
+      if (!/^[a-f0-9]{64}$/i.test(cleanAccessKey)) {
+        console.error('AccessKey 格式不正确（应为64位十六进制字符串）:', {
+          accessId: cleanAccessId,
+          pattern: 'Expected: /^[a-f0-9]{64}$/i'
+        });
+      }
+
+      const user = await this.getUserByAccessId(cleanAccessId);
+      if (!user) {
+        console.error('用户不存在', cleanAccessId);
+        return null;
+      }
+
+      const isValidKey = await this.verifyPassword(cleanAccessKey, user.access_key_hash);
+      if (!isValidKey) {
+        console.error('AccessKey 验证失败:', {
+          accessId: cleanAccessId,
+          keyLength: cleanAccessKey.length
+        });
+        return null;
+      }
+
+      await this.updateLastApiCallTime(user.id);
+
+      console.log('用户验证成功:', { userId: user.id, username: user.username, accessId });
+      return user;
+
+    } catch (error) {
+      console.error('验证用户凭据失败:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取用户设置
+   */
+  async getUserSettings(userId: string): Promise<any | null> {
+    try {
+      // 获取用户信息和设置
+      const users = await executeMysqlQuery<any[]>(
+        'SELECT id, display_name, profile FROM users WHERE id = ? AND status = "active" LIMIT 1',
+        [userId]
+      );
+
+      if (users.length === 0) {
+        return null;
+      }
+
+      const user = users[0];
+
+      // 解析 profile JSON 字段中的设置
+      let profileSettings: UserProfile = {};
+      if (user.profile) {
+        try {
+          profileSettings = typeof user.profile === 'string'
+            ? JSON.parse(user.profile)
+            : user.profile;
+        } catch (error) {
+          console.warn('解析用户profile失败:', error);
+          profileSettings = {};
+        }
+      }
+
+      // 返回合并后的设置
+      return {
+        displayName: user.display_name || '',
+        emailNotifications: profileSettings.emailNotifications ?? true,
+        quotaReminders: profileSettings.quotaReminders ?? true,
+        autoSave: profileSettings.autoSave ?? true
+      };
+
+    } catch (error) {
+      console.error('获取用户设置失败:', error);
+      throw new Error(`获取用户设置失败: ${error}`);
+    }
+  }
+
+  /**
+   * 更新用户设置
+   */
+  async updateUserSettings(userId: string, settingsData: any): Promise<any> {
+    try {
+      // 首先获取用户当前信息
+      const users = await executeMysqlQuery<any[]>(
+        'SELECT id, display_name, profile FROM users WHERE id = ? AND status = "active" LIMIT 1',
+        [userId]
+      );
+
+      if (users.length === 0) {
+        throw new Error('用户不存在');
+      }
+
+      const user = users[0];
+
+      // 解析现有的 profile 设置
+      let currentProfile: UserProfile = {};
+      if (user.profile) {
+        try {
+          currentProfile = typeof user.profile === 'string'
+            ? JSON.parse(user.profile)
+            : user.profile;
+        } catch (error) {
+          console.warn('解析用户profile失败，使用默认设置', error);
+          currentProfile = {};
+        }
+      }
+
+      // 准备更新的字段
+      const updateFields: string[] = [];
+      const updateValues: any[] = [];
+
+      // 更新 display_name
+      if (settingsData.displayName !== undefined) {
+        updateFields.push('display_name = ?');
+        updateValues.push(settingsData.displayName);
+      }
+
+      // 更新 profile 中的设置
+      const newProfile: UserProfile = { ...currentProfile };
+      let profileUpdated = false;
+
+      if (settingsData.emailNotifications !== undefined) {
+        newProfile.emailNotifications = settingsData.emailNotifications;
+        profileUpdated = true;
+      }
+      if (settingsData.quotaReminders !== undefined) {
+        newProfile.quotaReminders = settingsData.quotaReminders;
+        profileUpdated = true;
+      }
+      if (settingsData.autoSave !== undefined) {
+        newProfile.autoSave = settingsData.autoSave;
+        profileUpdated = true;
+      }
+
+      if (profileUpdated) {
+        updateFields.push('profile = ?');
+        updateValues.push(JSON.stringify(newProfile));
+      }
+
+      // 执行更新
+      if (updateFields.length > 0) {
+        updateFields.push('updated_at = NOW()');
+        updateValues.push(userId);
+
+        await executeMysqlQuery(
+          `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
+          updateValues
+        );
+      }
+
+      // 返回更新后的设置
+      return await this.getUserSettings(userId);
+
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('更新用户设置失败:', error);
+      throw new Error(`更新用户设置失败: ${error}`);
+    }
+  }
+
+  /**
+   * 修改用户密码
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    if (!userId) {
+      throw new Error('用户ID不能为空');
+    }
+    if (!currentPassword || !newPassword) {
+      throw new Error('当前密码与新密码均不能为空');
+    }
+    if (newPassword.length < 6) {
+      throw new Error('新密码长度至少6位');
+    }
+
+    try {
+      const users = await executeMysqlQuery<User[]>(
+        'SELECT id, password_hash FROM users WHERE id = ? AND status = "active" LIMIT 1',
+        [userId]
+      );
+
+      if (users.length === 0) {
+        throw new Error('用户不存在');
+      }
+      const user = users[0];
+
+      const ok = await this.verifyPassword(currentPassword, (user as any).password_hash);
+      if (!ok) {
+        throw new Error('当前密码错误');
+      }
+
+      const newHash = await this.hashPassword(newPassword);
+      await executeMysqlQuery(
+        'UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ? LIMIT 1',
+        [newHash, userId]
+      );
+      return;
+    } catch (error) {
+      if (error instanceof ValidationError) throw error;
+      throw new Error(`修改密码失败: ${error}`);
+    }
+  }
+
+
+  async updateLastApiCallTime(userId: string): Promise<void> {
+    try {
+      await executeMysqlQuery(
+        'UPDATE users SET last_api_call_at = NOW() WHERE id = ?',
+        [userId]
+      );
+    } catch (error) {
+      console.error('更新最后API调用时间失败:', error);
+    }
+  }
+
+  async getUserById(userId: string): Promise<User | null> {
+    try {
+      const users = await executeMysqlQuery<User[]>(
+        'SELECT * FROM users WHERE id = ? AND status = "active" LIMIT 1',
+        [userId]
+      );
+
+      return users.length > 0 ? users[0] : null;
+    } catch (error) {
+      throw new Error(`查询用户失败: ${error}`);
+    }
+  }
+
+  async checkQuotaAvailable(userId: string): Promise<{ available: boolean; reason?: string }> {
+    try {
+      const quotaInfo = await this.getUserQuota(userId);
+
+      if (!quotaInfo) {
+        return { available: false, reason: '用户不存在' };
+
+
+      }
+
+      if (quotaInfo.quota_remaining_today <= 0) {
+        return { available: false, reason: '今日配额已用尽' };
+      }
+
+      if (quotaInfo.quota_remaining_month <= 0) {
+        return { available: false, reason: '本月配额已用尽' };
+      }
+
+      return { available: true };
+    } catch (error) {
+      throw new Error(`检查用户配额失败: ${error}`);
+    }
+  }
+
+
+  async incrementQuotaUsage(userId: string): Promise<void> {
+    try {
+      await this.ensureQuotaWindowFresh(userId);
+      await executeMysqlQuery(
+        `UPDATE users SET
+          quota_used_today = quota_used_today + 1,
+          quota_used_month = quota_used_month + 1,
+          last_api_call_at = NOW()
+        WHERE id = ? AND status = 'active'`,
+        [userId]
+      );
+    } catch (error) {
+      throw new Error(`增加用户配额使用量失败: ${error}`);
+    }
+  }
+
+
+  async resetDailyQuota(): Promise<{ affectedUsers: number }> {
+    try {
+      const result = await executeMysqlQuery(
+        `UPDATE users SET
+          quota_used_today = 0
+        WHERE status = 'active'`
+      );
+
+      console.log(`日配额重置完成，影响用户数: ${result.affectedRows || 0}`);
+      return { affectedUsers: result.affectedRows || 0 };
+    } catch (error) {
+      throw new Error(`重置日配额失败: ${error}`);
+    }
+  }
+
+
+  async resetMonthlyQuota(): Promise<{ affectedUsers: number }> {
+    try {
+      const result = await executeMysqlQuery(
+        `UPDATE users SET
+          quota_used_month = 0,
+          quota_reset_date = CURDATE()
+        WHERE status = 'active'`
+      );
+
+      console.log(`月配额重置完成，影响用户数: ${result.affectedRows || 0}`);
+      return { affectedUsers: result.affectedRows || 0 };
+    } catch (error) {
+      throw new Error(`重置月配额失败: ${error}`);
+    }
+  }
+
+  async getQuotaUsageStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    dailyUsageTotal: number;
+    monthlyUsageTotal: number;
+  }> {
+    try {
+      const stats = await executeMysqlQuery<any[]>(
+        `SELECT
+          COUNT(*) as totalUsers,
+          COUNT(CASE WHEN status = 'active' THEN 1 END) as activeUsers,
+          SUM(CASE WHEN DATE(last_api_call_at) = CURDATE() THEN quota_used_today ELSE 0 END) as dailyUsageTotal,
+          SUM(quota_used_month) as monthlyUsageTotal
+        FROM users`
+      );
+
+      return stats[0] || {
+        totalUsers: 0,
+        activeUsers: 0,
+        dailyUsageTotal: 0,
+        monthlyUsageTotal: 0
+      };
+    } catch (error) {
+      throw new Error(`获取配额统计失败: ${error}`);
+    }
+  }
+
+  /**
+   * 发送密码重置验证码
+   */
+  async sendPasswordResetCode(phoneOrEmail: string): Promise<{ success: boolean; message: string; code?: string }> {
+    try {
+      // 判断是手机号还是邮箱
+      const isEmail = this.validateEmail(phoneOrEmail);
+      const isPhone = this.validatePhone(phoneOrEmail);
+
+      if (!isEmail && !isPhone) {
+        return { success: false, message: '请输入有效的手机号或邮箱' };
+      }
+
+      // 查询用户是否存在
+      const query = isEmail
+        ? 'SELECT id, phone, email, username FROM users WHERE email = ? AND status = "active" LIMIT 1'
+        : 'SELECT id, phone, email, username FROM users WHERE phone = ? AND status = "active" LIMIT 1';
+
+      const users = await executeMysqlQuery<User[]>(query, [phoneOrEmail]);
+
+      if (users.length === 0) {
+        return { success: false, message: '该账号不存在' };
+      }
+
+      const user = users[0];
+
+      // 检查是否频繁请求（1分钟内只能请求一次）
+      const recentTokens = await executeMysqlQuery<any[]>(
+        `SELECT id FROM password_reset_tokens
+         WHERE user_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+         LIMIT 1`,
+        [user.id]
+      );
+
+      if (recentTokens.length > 0) {
+        return { success: false, message: '请求过于频繁，请稍后再试' };
+      }
+
+      // 如果是手机号，发送短信验证码
+      if (isPhone && user.phone) {
+        try {
+          const { getSmsService } = await import('./SmsService.js');
+          const smsService = getSmsService();
+          const result = await smsService.sendVerifyCode(user.phone, 15); // 15分钟有效期
+
+          if (result.success && result.code) {
+            // 使用短信服务返回的验证码
+            const verifyCode = result.code;
+
+            // 生成重置令牌记录
+            const tokenId = randomUUID();
+            const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15分钟后过期
+
+            // 先使之前的重置令牌失效
+            await executeMysqlQuery(
+              `UPDATE password_reset_tokens
+               SET verified = 1
+               WHERE user_id = ? AND verified = 0`,
+              [user.id]
+            );
+
+            // 插入新的重置令牌（存储验证码）
+            await executeMysqlQuery(
+              `INSERT INTO password_reset_tokens (id, user_id, identifier, token, expires_at, created_at, verified, attempts)
+               VALUES (?, ?, ?, ?, ?, NOW(), 0, 0)`,
+              [tokenId, user.id, phoneOrEmail, verifyCode, expiresAt]
+            );
+
+            console.log('密码重置令牌已创建:', {
+              tokenId,
+              userId: user.id,
+              phoneOrEmail,
+              tokenLength: verifyCode.length
+            });
+
+            // 在API响应中，只在开发环境返回验证码
+            return {
+              success: true,
+              message: '验证码发送成功',
+              code: process.env.NODE_ENV === 'development' ? verifyCode : undefined
+            };
+          }
+
+          return result;
+        } catch (error) {
+          console.error('短信服务错误:', error);
+          return { success: false, message: '短信服务暂不可用，请稍后再试' };
+        }
+      }
+
+      // 如果是邮箱，目前暂不支持
+      return { success: false, message: '暂不支持邮箱重置密码，请使用手机号' };
+
+    } catch (error: any) {
+      console.error('发送密码重置验证码失败:', error);
+      return { success: false, message: '系统错误，请稍后再试' };
+    }
+  }
+
+  /**
+   * 验证密码重置验证码
+   */
+  async verifyPasswordResetCode(phoneOrEmail: string, code: string): Promise<{ success: boolean; message: string; token?: string }> {
+    try {
+      const isPhone = this.validatePhone(phoneOrEmail);
+      const isEmail = this.validateEmail(phoneOrEmail);
+
+      if (!isPhone && !isEmail) {
+        return { success: false, message: '请输入有效的手机号或邮箱' };
+      }
+
+      // 查询用户
+      const query = isEmail
+        ? 'SELECT id FROM users WHERE email = ? AND status = "active" LIMIT 1'
+        : 'SELECT id FROM users WHERE phone = ? AND status = "active" LIMIT 1';
+
+      const users = await executeMysqlQuery<User[]>(query, [phoneOrEmail]);
+
+      if (users.length === 0) {
+        return { success: false, message: '用户不存在' };
+      }
+
+      const userId = users[0].id;
+
+      // 直接从 password_reset_tokens 中验证验证码
+      const tokens = await executeMysqlQuery<any[]>(
+        `SELECT id FROM password_reset_tokens
+         WHERE user_id = ? AND identifier = ? AND token = ?
+         AND verified = 0 AND expires_at > NOW() AND attempts < 5
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId, phoneOrEmail, code]
+      );
+
+      if (tokens.length === 0) {
+        // 增加尝试次数
+        await executeMysqlQuery(
+          `UPDATE password_reset_tokens
+           SET attempts = attempts + 1
+           WHERE user_id = ? AND identifier = ?
+           AND verified = 0 AND expires_at > NOW()`,
+          [userId, phoneOrEmail]
+        );
+        return { success: false, message: '验证码错误或已过期' };
+      }
+
+      const tokenRecord = tokens[0];
+
+      return {
+        success: true,
+        message: '验证成功',
+        token: tokenRecord.id
+      };
+
+    } catch (error: any) {
+      console.error('验证密码重置验证码失败:', error);
+      return { success: false, message: '验证失败，请重试' };
+    }
+  }
+
+  /**
+   * 使用验证码重置密码
+   */
+  async resetPasswordWithCode(phoneOrEmail: string, code: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // 1. 验证密码长度
+      if (newPassword.length < 6) {
+        return { success: false, message: '密码长度至少6位' };
+      }
+
+      // 2. 查询用户
+      const isPhone = this.validatePhone(phoneOrEmail);
+      const isEmail = this.validateEmail(phoneOrEmail);
+
+      if (!isPhone && !isEmail) {
+        return { success: false, message: '请输入有效的手机号或邮箱' };
+      }
+
+      const query = isEmail
+        ? 'SELECT id FROM users WHERE email = ? AND status = "active" LIMIT 1'
+        : 'SELECT id FROM users WHERE phone = ? AND status = "active" LIMIT 1';
+
+      const users = await executeMysqlQuery<User[]>(query, [phoneOrEmail]);
+
+      if (users.length === 0) {
+        return { success: false, message: '用户不存在' };
+      }
+
+      const userId = users[0].id;
+
+      // 3. 验证令牌是否有效（直接从 password_reset_tokens 比对验证码）
+      const tokens = await executeMysqlQuery<any[]>(
+        `SELECT id FROM password_reset_tokens
+         WHERE user_id = ? AND identifier = ? AND token = ?
+         AND verified = 0 AND expires_at > NOW() AND attempts < 5
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId, phoneOrEmail, code]
+      );
+
+      if (tokens.length === 0) {
+        // 增加尝试次数
+        await executeMysqlQuery(
+          `UPDATE password_reset_tokens
+           SET attempts = attempts + 1
+           WHERE user_id = ? AND identifier = ?
+           AND verified = 0 AND expires_at > NOW()`,
+          [userId, phoneOrEmail]
+        );
+        return { success: false, message: '验证码无效或已过期，请重新获取' };
+      }
+
+      const tokenId = tokens[0].id;
+
+      // 5. 更新密码
+      const newPasswordHash = await this.hashPassword(newPassword);
+      await executeMysqlQuery(
+        'UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?',
+        [newPasswordHash, userId]
+      );
+
+      // 6. 标记令牌为已使用
+      await executeMysqlQuery(
+        `UPDATE password_reset_tokens
+         SET verified = 1
+         WHERE id = ?`,
+        [tokenId]
+      );
+
+      // 7. 使该用户所有未使用的重置令牌失效
+      await executeMysqlQuery(
+        `UPDATE password_reset_tokens
+         SET verified = 1
+         WHERE user_id = ? AND verified = 0`,
+        [userId]
+      );
+
+      console.log(`用户 ${userId} 密码重置成功`);
+
+      return { success: true, message: '密码重置成功' };
+
+    } catch (error: any) {
+      console.error('重置密码失败:', error);
+      return { success: false, message: '密码重置失败，请重试' };
+    }
+  }
+
+  /**
+   * 清理过期的密码重置令牌（定时任务调用）
+   */
+  async cleanupExpiredResetTokens(): Promise<number> {
+    try {
+      const result = await executeMysqlQuery<any>(
+        `DELETE FROM password_reset_tokens
+         WHERE expires_at < NOW() OR verified = 1`
+      );
+
+      const deletedCount = result.affectedRows || 0;
+      if (deletedCount > 0) {
+        console.log(`已清理 ${deletedCount} 条过期的密码重置令牌`);
+      }
+
+      return deletedCount;
+    } catch (error) {
+      console.error('清理过期密码重置令牌失败:', error);
+      return 0;
+    }
+  }
+}

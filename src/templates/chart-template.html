@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: {{FONT_FAMILY}};
+            margin: 0;
+            padding: 20px;
+            background: {{BACKGROUND_GRADIENT}};
+            min-height: 100vh;
+            color: {{TEXT_COLOR}};
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: {{CONTAINER_BACKGROUND}};
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: {{HEADER_GRADIENT}};
+            color: {{HEADER_TEXT_COLOR}};
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 30px 0;
+            background: {{CHART_BACKGROUND}};
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: {{FOOTER_TEXT_COLOR}};
+            font-size: 0.9em;
+            border-top: 1px solid {{FOOTER_BORDER}};
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .content {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 2em;
+            }
+            .chart-container {
+                height: 400px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{TITLE}}</h1>
+            <p>生成时间: {{GENERATION_TIME}} | 图表类型: {{CHART_TYPE_NAME}}</p>
+        </div>
+        <div class="content">
+
+            
+            <div class="chart-container">
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>由专业数据可视化MCP服务器生成 | 支持智能图表推荐和多主题样式</p>
+        </div>
+    </div>
+    
+    <script>
+        // 图表配置
+        const chartConfig = {{CHART_CONFIG}};
+        
+        // 渲染图表
+        const ctx = document.getElementById('chart').getContext('2d');
+        new Chart(ctx, chartConfig);
+        
+        // 添加交互功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 响应式处理
+            window.addEventListener('resize', function() {
+                if (window.chart) {
+                    window.chart.resize();
+                }
+            });
+            
+            // 保存图表实例
+            window.chart = new Chart(ctx, chartConfig);
+        });
+    </script>
+</body>
+</html>
