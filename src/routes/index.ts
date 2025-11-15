@@ -1,8 +1,8 @@
 import express from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { PanelManager } from '../PanelManager.js';
-import { UserManager } from '../UserManager.js';
+import { PanelManager } from '../core/PanelManager.js';
+import { UserManager } from '../core/UserManager.js';
 import { SqlAiService } from '../services/SqlAiService.js';
 import { User } from '../types.js';
 
@@ -14,6 +14,7 @@ import { PanelController } from '../controllers/PanelController.js';
 import { UserController } from '../controllers/UserController.js';
 import { QuotaController } from '../controllers/QuotaController.js';
 import { VisualizationController } from '../controllers/VisualizationController.js';
+import { DashboardController } from '../controllers/DashboardController.js';
 
 // Routes
 import { setupHealthRoutes } from './healthRoutes.js';
@@ -25,6 +26,7 @@ import { setupUserRoutes } from './userRoutes.js';
 import { setupQuotaRoutes } from './quotaRoutes.js';
 import { setupMcpRoutes } from './mcpRoutes.js';
 import { setupStaticRoutes } from './staticRoutes.js';
+import { setupDashboardRoutes } from './dashboardRoutes.js';
 
 /**
  * 路由注册中心
@@ -53,11 +55,12 @@ export function setupAllRoutes(
   // 初始化控制器
   const authController = new AuthController(userManager);
   const smsController = new SmsController(userManager);
-  const sqlController = new SqlController(userManager, sqlAiService);
+  const sqlController = new SqlController(userManager, sqlAiService, panelManager);
   const panelController = new PanelController(panelManager);
   const userController = new UserController(userManager);
   const quotaController = new QuotaController(userManager);
   const visualizationController = new VisualizationController(userManager, panelManager);
+  const dashboardController = new DashboardController(userManager, panelManager);
 
   // 注册路由
   setupHealthRoutes(app, mcpServer, mcpTransports);
@@ -67,6 +70,7 @@ export function setupAllRoutes(
   setupPanelRoutes(app, panelController, panelManager);
   setupUserRoutes(app, userController);
   setupQuotaRoutes(app, quotaController);
+  setupDashboardRoutes(app, dashboardController, userManager);
 
   // MCP 路由需要在最后注册（避免与其他路由冲突）
   // 注意：即使 mcpServer 为 null，也要注册路由，在运行时检查

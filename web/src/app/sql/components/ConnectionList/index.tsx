@@ -6,7 +6,7 @@ import { sqlApiService } from '../../services/sqlApiService';
 import { useCopyToClipboard } from '../../hooks';
 
 interface ConnectionListProps {
-  onConnectionSelect?: (connection: Connection) => void;
+  onConnectionSelect?: (connection: Connection | null) => void;
   selectedConnectionId?: string;
   onDatabaseSelect?: (database: string) => void;
   onTableSelect?: (table: Schema) => void;
@@ -136,7 +136,7 @@ export function ConnectionList({
       
       // 如果删除的是当前选中的连接，清除选择
       if (selectedConnectionId === connectionId) {
-        onConnectionSelect?.(undefined as any);
+        onConnectionSelect?.(null);
       }
     }
   };

@@ -1,49 +1,15 @@
 import { BaseApiService } from './BaseApiService';
-import type { 
-  Connection, 
-  ExecutionResult, 
+import type {
+  Connection,
+  ExecutionResult,
   Schema,
-  ChatMessage 
+  ChatMessage
 } from '../types';
 import { STORAGE_KEYS } from '../config/constants';
-import { cleanAccessKey, cleanAccessId } from '@/utils/cleanAccessKey';
 
 class SqlApiService extends BaseApiService {
   constructor() {
     super(import.meta.env.VITE_API_URL || '');
-  }
-
-
-  protected getAuthHeaders(): Record<string, string> {
-    const headers = super.getAuthHeaders();
-    
-    try {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-      const rawAccessId = userInfo.access_id;
-      const rawKey = localStorage.getItem('accessKey');
-      
-      // 使用专门的清理函数处理 AccessID 和 AccessKey
-      const accessId = cleanAccessId(rawAccessId);
-      const accessKey = cleanAccessKey(rawKey);
-      
-      if (accessId && accessKey) {
-        headers['AccessID'] = accessId;
-        headers['AccessKey'] = accessKey;
-        
-        // 调试日志
-        if (accessKey.length !== 64) {
-          console.error('清理后的 AccessKey 长度仍然不正确:', {
-            expected: 64,
-            actual: accessKey.length,
-            rawLength: rawKey?.length
-          });
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to get auth headers:', error);
-    }
-    
-    return headers;
   }
 
   /**
@@ -161,6 +127,41 @@ class SqlApiService extends BaseApiService {
     chartTypeName: string;
   }> {
     return this.post('/api/sql/visualize', params);
+  }
+
+  /**
+   * 从SQL查询结果生成图表
+   * 新的 API：立即生成图表、创建Panel、扣费，并可选地添加到Dashboard
+   */
+  async generateChart(params: {
+    sql: string;
+    queryResult: {
+      columns: string[];
+      rows: any[];
+    };
+    chartConfig: {
+      type: string;
+      title: string;
+      theme?: string;
+      xAxis?: string;
+      yAxis?: string;
+    };
+    dashboardId?: string;
+  }): Promise<{
+    chartId: string;
+    panelId: string;
+    panelUrl: string;
+    ossUrl: string;
+    addedToDashboard: boolean;
+    dashboardId?: string;
+    message: string;
+    quota: {
+      total: number;
+      used: number;
+      remaining: number;
+    };
+  }> {
+    return this.post('/api/sql/generate-chart', params);
   }
 }
 

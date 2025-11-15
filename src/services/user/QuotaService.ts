@@ -1,4 +1,4 @@
-import { executeMysqlQuery } from '../../database.js';
+import { executeMysqlQuery } from '../../config/database.js';
 import { User, UserQuotaInfo } from '../../types.js';
 
 export class QuotaService {

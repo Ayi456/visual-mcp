@@ -1,7 +1,7 @@
 import mysql from 'mysql2/promise';
 import { createClient, RedisClientType } from 'redis';
-import { DatabaseConfig, RedisConfig } from './types.js';
-import { retry } from './utils.js';
+import { DatabaseConfig, RedisConfig } from '../types.js';
+import { retry } from '../utils.js';
 
 // MySQL 连接池
 let mysqlPool: mysql.Pool | null = null;
@@ -20,9 +20,18 @@ export async function initMysqlPool(config: DatabaseConfig): Promise<mysql.Pool>
       user: config.user,
       password: config.password,
       database: config.database,
+      // 优化: 连接池配置
       waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
+      connectionLimit: 20,            // 增加连接池大小
+      maxIdle: 10,                    // 最大空闲连接数
+      idleTimeout: 60000,             // 空闲连接超时时间（60秒）
+      queueLimit: 0,                  // 队列无限制
+      enableKeepAlive: true,          // 保持连接活跃
+      keepAliveInitialDelay: 0,       // 立即开始keep-alive
+      // 优化: 连接配置
+      charset: 'utf8mb4',
+      timezone: '+00:00',
+      connectTimeout: 10000,          // 连接超时10秒
     });
 
     // 测试连接
@@ -30,7 +39,7 @@ export async function initMysqlPool(config: DatabaseConfig): Promise<mysql.Pool>
     await connection.ping();
     connection.release();
 
-    console.log('MySQL连接池初始化成功');
+    console.log('MySQL连接池初始化成功 (连接数: 20)');
     return mysqlPool;
   } catch (error) {
     throw new Error(`MySQL连接池初始化失败: ${error}`);
@@ -46,8 +55,22 @@ export async function initRedisClient(config: RedisConfig): Promise<RedisClientT
       socket: {
         host: config.host,
         port: config.port,
+        // 优化: 连接配置
+        connectTimeout: 10000,          // 连接超时10秒
+        reconnectStrategy: (retries) => {
+          // 优化: 重连策略 - 指数退避
+          if (retries > 10) {
+            console.error('Redis重连次数过多，停止重连');
+            return new Error('Redis重连次数过多');
+          }
+          const delay = Math.min(retries * 50, 5000);
+          console.log(`Redis重连延迟: ${delay}ms (重试次数: ${retries})`);
+          return delay;
+        },
       },
       password: config.password,
+      // 优化: 命令队列
+      commandsQueueMaxLength: 1000,
     });
 
     redisClient.on('error', (err) => {
@@ -62,11 +85,15 @@ export async function initRedisClient(config: RedisConfig): Promise<RedisClientT
       console.log('Redis客户端重连中...');
     });
 
+    redisClient.on('ready', () => {
+      console.log('Redis客户端就绪');
+    });
+
     await redisClient.connect();
-    
+
     // 测试连接
     await redisClient.ping();
-    
+
     console.log('Redis客户端初始化成功');
     return redisClient;
   } catch (error) {

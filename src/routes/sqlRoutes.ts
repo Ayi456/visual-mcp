@@ -2,7 +2,7 @@ import express from 'express';
 import { SqlController } from '../controllers/SqlController.js';
 import { VisualizationController } from '../controllers/VisualizationController.js';
 import { createSqlAuthMiddleware } from '../middleware/authentication.js';
-import { UserManager } from '../UserManager.js';
+import { UserManager } from '../core/UserManager.js';
 
 export function setupSqlRoutes(
   app: express.Application,
@@ -23,6 +23,9 @@ export function setupSqlRoutes(
   app.post('/api/sql/schema', sqlController.getSchema);
 
   app.post('/api/sql/chat', sqlController.chat);
+
+  // 生成图表并创建Panel（消耗配额）
+  app.post('/api/sql/generate-chart', sqlController.generateChart);
 
   app.post('/api/sql/visualize', visualizationController.visualize);
 }

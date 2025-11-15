@@ -37,7 +37,7 @@ const ExecutionView: React.FC = () => {
   }, [result, currentSession?.messages]);
 
   const tabs: { key: TabType; label: string; count?: number }[] = [
-    { key: 'results', label: '查询结果', count: result?.rowCount },
+    { key: 'results', label: '查询结果' },
     { key: 'stats', label: '统计信息' },
     { key: 'messages', label: '消息' }
   ];
@@ -53,11 +53,6 @@ const ExecutionView: React.FC = () => {
             className={`result-tab ${activeTab === tab.key ? 'active' : ''}`}
           >
             {tab.label}
-            {tab.count !== undefined && (
-              <Badge variant="default" className="ml-2">
-                {tab.count}
-              </Badge>
-            )}
           </button>
         ))}
       </div>
@@ -116,12 +111,9 @@ const ExecutionView: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">查询成功</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">返回 {result.rowCount} 行数据</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">返回 {result.rows.length} 行数据</p>
                       {result.executionTime && (
                         <p className="text-sm text-gray-600 dark:text-gray-400">执行时间: {result.executionTime}ms</p>
-                      )}
-                      {result.affectedRows !== undefined && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">影响行数: {result.affectedRows}</p>
                       )}
                     </div>
                   </div>

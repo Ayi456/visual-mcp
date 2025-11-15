@@ -1,121 +1,214 @@
 import { ThemeConfig, StyleConfig } from '../types/chart.types.js';
 
-// 预设主题配置
+// 预设主题配置 - 专业配色方案
 export const PRESET_THEMES: { [key: string]: ThemeConfig } = {
   default: {
     name: '默认主题',
     colors: {
-      primary: '#4facfe',
-      secondary: '#00f2fe',
+      primary: '#2563eb',      // 专业蓝
+      secondary: '#3b82f6',
       background: '#ffffff',
-      text: '#333333',
-      grid: 'rgba(0, 0, 0, 0.1)',
+      text: '#1f2937',
+      grid: 'rgba(107, 114, 128, 0.15)',
       accent: [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+        '#2563eb',  // 蓝色
+        '#dc2626',  // 红色
+        '#16a34a',  // 绿色
+        '#ea580c',  // 橙色
+        '#9333ea',  // 紫色
+        '#0891b2',  // 青色
+        '#ca8a04',  // 金色
+        '#64748b'   // 灰色
       ]
     },
     fonts: {
-      title: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      body: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      title: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+      body: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif",
       size: {
         title: 16,
         body: 12,
-        axis: 14
+        axis: 13
       }
     },
     chart: {
       borderWidth: 2,
-      pointRadius: 6,
-      tension: 0.4,
+      pointRadius: 4,
+      tension: 0.3,
       opacity: 0.8
     }
   },
   dark: {
     name: '深色主题',
     colors: {
-      primary: '#667eea',
-      secondary: '#764ba2',
-      background: '#2d3748',
-      text: '#ffffff',
-      grid: 'rgba(255, 255, 255, 0.1)',
+      primary: '#3b82f6',
+      secondary: '#60a5fa',
+      background: '#1f2937',
+      text: '#f9fafb',
+      grid: 'rgba(156, 163, 175, 0.2)',
       accent: [
-        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
-        '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'
+        '#3b82f6',  // 蓝色
+        '#ef4444',  // 红色
+        '#10b981',  // 绿色
+        '#f59e0b',  // 琥珀色
+        '#8b5cf6',  // 紫色
+        '#06b6d4',  // 青色
+        '#f97316',  // 橙色
+        '#6b7280'   // 灰色
       ]
     },
     fonts: {
-      title: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      body: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      title: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+      body: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif",
       size: {
-        title: 18,
+        title: 16,
         body: 12,
-        axis: 14
+        axis: 13
       }
     },
     chart: {
       borderWidth: 2,
-      pointRadius: 6,
-      tension: 0.4,
-      opacity: 0.9
+      pointRadius: 4,
+      tension: 0.3,
+      opacity: 0.85
     }
   },
   business: {
     name: '商务主题',
     colors: {
-      primary: '#2c3e50',
-      secondary: '#34495e',
-      background: '#ecf0f1',
-      text: '#2c3e50',
-      grid: 'rgba(44, 62, 80, 0.1)',
+      primary: '#0f172a',
+      secondary: '#1e293b',
+      background: '#f8fafc',
+      text: '#0f172a',
+      grid: 'rgba(100, 116, 139, 0.15)',
       accent: [
-        '#3498db', '#e74c3c', '#2ecc71', '#f39c12',
-        '#9b59b6', '#1abc9c', '#34495e', '#95a5a6'
+        '#0f172a',  // 深蓝灰
+        '#7c3aed',  // 专业紫
+        '#0891b2',  // 商务青
+        '#059669',  // 商务绿
+        '#dc2626',  // 警示红
+        '#ea580c',  // 强调橙
+        '#4f46e5',  // 靛蓝
+        '#64748b'   // 中性灰
       ]
     },
     fonts: {
-      title: "'Arial', sans-serif",
-      body: "'Arial', sans-serif",
+      title: "'Inter', -apple-system, 'Segoe UI', 'Roboto', sans-serif",
+      body: "'Inter', -apple-system, 'Segoe UI', 'Roboto', sans-serif",
       size: {
-        title: 16,
+        title: 15,
         body: 11,
         axis: 12
       }
     },
     chart: {
-      borderWidth: 1,
-      pointRadius: 4,
+      borderWidth: 1.5,
+      pointRadius: 3,
       tension: 0.2,
-      opacity: 0.85
+      opacity: 0.75
     }
   },
-  colorful: {
-    name: '彩色主题',
+  minimal: {
+    name: '极简主题',
     colors: {
-      primary: '#ff6b6b',
-      secondary: '#4ecdc4',
-      background: '#f8f9fa',
-      text: '#495057',
-      grid: 'rgba(73, 80, 87, 0.1)',
+      primary: '#18181b',
+      secondary: '#27272a',
+      background: '#fafafa',
+      text: '#18181b',
+      grid: 'rgba(161, 161, 170, 0.12)',
       accent: [
-        '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4',
-        '#ffeaa7', '#dda0dd', '#98d8c8', '#f7dc6f',
-        '#ff7675', '#74b9ff', '#a29bfe', '#fd79a8'
+        '#18181b',  // 黑色
+        '#71717a',  // 灰色
+        '#a1a1aa',  // 浅灰
+        '#d4d4d8',  // 更浅灰
+        '#52525b',  // 中灰
+        '#3f3f46',  // 深灰
+        '#27272a',  // 更深灰
+        '#09090b'   // 最深
       ]
     },
     fonts: {
-      title: "'Comic Sans MS', cursive",
-      body: "'Comic Sans MS', cursive",
+      title: "'SF Pro Display', -apple-system, 'Segoe UI', sans-serif",
+      body: "'SF Pro Text', -apple-system, 'Segoe UI', sans-serif",
       size: {
-        title: 18,
-        body: 13,
-        axis: 14
+        title: 14,
+        body: 11,
+        axis: 11
       }
     },
     chart: {
-      borderWidth: 3,
-      pointRadius: 8,
-      tension: 0.6,
+      borderWidth: 1,
+      pointRadius: 2,
+      tension: 0.1,
+      opacity: 0.65
+    }
+  },
+  vibrant: {
+    name: '活力主题',
+    colors: {
+      primary: '#7c3aed',
+      secondary: '#8b5cf6',
+      background: '#ffffff',
+      text: '#111827',
+      grid: 'rgba(107, 114, 128, 0.12)',
+      accent: [
+        '#7c3aed',  // 紫色
+        '#ec4899',  // 粉色
+        '#06b6d4',  // 青色
+        '#10b981',  // 绿色
+        '#f59e0b',  // 琥珀
+        '#ef4444',  // 红色
+        '#3b82f6',  // 蓝色
+        '#8b5cf6'   // 紫罗兰
+      ]
+    },
+    fonts: {
+      title: "'Inter', -apple-system, 'Segoe UI', sans-serif",
+      body: "'Inter', -apple-system, 'Segoe UI', sans-serif",
+      size: {
+        title: 16,
+        body: 12,
+        axis: 13
+      }
+    },
+    chart: {
+      borderWidth: 2.5,
+      pointRadius: 5,
+      tension: 0.4,
+      opacity: 0.8
+    }
+  },
+  print: {
+    name: '打印友好主题',
+    colors: {
+      primary: '#000000',
+      secondary: '#404040',
+      background: '#ffffff',
+      text: '#000000',
+      grid: 'rgba(0, 0, 0, 0.1)',
+      accent: [
+        '#000000',  // 黑色
+        '#4a4a4a',  // 深灰
+        '#737373',  // 中灰
+        '#a3a3a3',  // 浅灰
+        '#2a2a2a',  // 暗灰
+        '#5a5a5a',  // 灰
+        '#8a8a8a',  // 亮灰
+        '#b3b3b3'   // 浅灰
+      ]
+    },
+    fonts: {
+      title: "'Times New Roman', 'Georgia', serif",
+      body: "'Times New Roman', 'Georgia', serif",
+      size: {
+        title: 14,
+        body: 10,
+        axis: 11
+      }
+    },
+    chart: {
+      borderWidth: 1.5,
+      pointRadius: 3,
+      tension: 0.1,
       opacity: 0.7
     }
   }
@@ -139,13 +232,17 @@ export function applyThemeToChart(chartConfig: any, theme: ThemeConfig, style: S
         dataset.backgroundColor = theme.colors.accent.slice(0, dataset.data.length);
         dataset.borderColor = theme.colors.background;
       } else if (chartConfig.type === 'line' || chartConfig.type === 'area') {
-        dataset.borderColor = accentColor;
-        dataset.backgroundColor = accentColor.replace(')', ', 0.3)').replace('rgb', 'rgba');
-        dataset.pointBackgroundColor = accentColor;
-        dataset.pointBorderColor = theme.colors.background;
-        dataset.pointBorderWidth = theme.chart.borderWidth;
-        dataset.pointRadius = theme.chart.pointRadius;
-        dataset.tension = theme.chart.tension;
+        if (style.isMultiSeries && dataset.borderColor) {
+          dataset.pointBorderColor = dataset.pointBorderColor || theme.colors.background;
+        } else {
+          dataset.borderColor = accentColor;
+          dataset.backgroundColor = accentColor.replace(')', ', 0.3)').replace('rgb', 'rgba');
+          dataset.pointBackgroundColor = accentColor;
+          dataset.pointBorderColor = theme.colors.background;
+          dataset.pointBorderWidth = theme.chart.borderWidth;
+          dataset.pointRadius = theme.chart.pointRadius;
+          dataset.tension = theme.chart.tension;
+        }
       } else {
         dataset.backgroundColor = accentColor.replace(')', ', ' + theme.chart.opacity + ')').replace('rgb', 'rgba');
         dataset.borderColor = accentColor;

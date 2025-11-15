@@ -23,18 +23,38 @@ export class OSSUploader {
   private client: OSS;
   private bucket: string;
   private endpoint: string;
+  private maxRetries: number = 3;
+  private retryDelay: number = 1000; // 1秒
 
   constructor(config: OSSConfig) {
     this.validateConfig(config);
 
     this.bucket = config.bucket;
     this.endpoint = config.endpoint;
+
+    // 确保使用HTTPS协议
+    const secureEndpoint = config.endpoint.replace(/^http:\/\//i, 'https://').replace(/^https:\/\//i, '');
+
     this.client = new OSS({
       accessKeyId: config.accessKeyId,
       accessKeySecret: config.accessKeySecret,
       bucket: config.bucket,
-      endpoint: config.endpoint,
+      endpoint: secureEndpoint,
+      secure: true, // 强制使用HTTPS
+      timeout: 60000, // 60秒超时
+      region: this.extractRegion(config.endpoint), // 提取region
     });
+
+    console.log(`OSS客户端初始化成功: bucket=${this.bucket}, endpoint=${secureEndpoint}, secure=true`);
+  }
+
+  /**
+   * 从endpoint提取region
+   */
+  private extractRegion(endpoint: string): string | undefined {
+    // 从endpoint提取region，例如：oss-cn-hangzhou.aliyuncs.com -> cn-hangzhou
+    const match = endpoint.match(/oss-([^.]+)\.aliyuncs\.com/);
+    return match ? match[1] : undefined;
   }
 
   private validateConfig(config: OSSConfig): void {
@@ -76,6 +96,38 @@ export class OSSUploader {
   }
 
   /**
+   * 带重试的上传操作
+   */
+  private async uploadWithRetry<T>(
+    uploadFn: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        console.log(`${operationName} - 尝试 ${attempt}/${this.maxRetries}`);
+        const result = await uploadFn();
+        if (attempt > 1) {
+          console.log(`${operationName} - 在第 ${attempt} 次尝试后成功`);
+        }
+        return result;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`${operationName} - 第 ${attempt} 次尝试失败:`, lastError.message);
+
+        if (attempt < this.maxRetries) {
+          const delay = this.retryDelay * attempt; // 指数退避
+          console.log(`等待 ${delay}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    throw new Error(`${operationName} 失败（已重试 ${this.maxRetries} 次）: ${lastError?.message}`);
+  }
+
+  /**
    * 上传 HTML 内容到 OSS
    */
   async uploadHTML(htmlContent: string, fileName?: string): Promise<UploadResult> {
@@ -83,32 +135,51 @@ export class OSSUploader {
       // 生成文件名
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const finalFileName = fileName || `visualization-${timestamp}.html`;
-      
+
       // 构建 OSS 路径
       const ossPath = `mcp-visualizations/${finalFileName}`;
-      
-      // 上传到 OSS（公共读权限）
-      const result = await this.client.put(ossPath, Buffer.from(htmlContent, 'utf8'), {
-        mime: 'text/html',
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'public, max-age=3600', // 1小时缓存
-          'Content-Disposition': 'inline; filename="chart.html"', // 强制浏览器内联显示
+      const buffer = Buffer.from(htmlContent, 'utf8');
+
+      console.log(`准备上传 HTML 到 OSS: ${ossPath}, 大小: ${buffer.length} 字节`);
+
+      // 使用重试机制上传到 OSS
+      await this.uploadWithRetry(
+        async () => {
+          return await this.client.put(ossPath, buffer, {
+            mime: 'text/html',
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'public, max-age=3600', // 1小时缓存
+              'Content-Disposition': 'inline; filename="chart.html"', // 强制浏览器内联显示
+            },
+          });
         },
-      });
+        `上传HTML文件 ${finalFileName}`
+      );
 
       // 生成公开访问 URL
       const publicUrl = `https://${this.bucket}.${this.endpoint}/${ossPath}`;
+
+      console.log(`HTML 上传成功: ${publicUrl}`);
 
       return {
         url: publicUrl,
         ossPath: ossPath,
         fileName: finalFileName,
-        size: Buffer.from(htmlContent, 'utf8').length
+        size: buffer.length
       };
     } catch (error) {
-      console.error('OSS 上传失败:', error);
-      throw new Error(`OSS 上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      console.error('OSS 上传失败:', errorMsg);
+
+      // 提供更详细的错误信息
+      if (errorMsg.includes('ETIMEDOUT') || errorMsg.includes('timeout')) {
+        throw new Error(`OSS 上传超时，请检查网络连接和OSS配置。错误详情: ${errorMsg}`);
+      } else if (errorMsg.includes('ECONNREFUSED')) {
+        throw new Error(`无法连接到OSS服务器，请检查endpoint配置。错误详情: ${errorMsg}`);
+      } else {
+        throw new Error(`OSS 上传失败: ${errorMsg}`);
+      }
     }
   }
 
@@ -119,12 +190,20 @@ export class OSSUploader {
     try {
       const fileName = path.basename(filePath);
       const finalOssPath = ossPath || `mcp-files/${fileName}`;
-      
-      const result = await this.client.put(finalOssPath, filePath, {
-        headers: {
-          'x-oss-object-acl': 'public-read', // 设置文件为公开可读
+
+      console.log(`准备上传文件到 OSS: ${finalOssPath}`);
+
+      // 使用重试机制上传到 OSS
+      await this.uploadWithRetry(
+        async () => {
+          return await this.client.put(finalOssPath, filePath, {
+            headers: {
+              'x-oss-object-acl': 'public-read', // 设置文件为公开可读
+            },
+          });
         },
-      });
+        `上传文件 ${fileName}`
+      );
 
       // 生成公开访问 URL
       const publicUrl = `https://${this.bucket}.${this.endpoint}/${finalOssPath}`;
@@ -133,6 +212,8 @@ export class OSSUploader {
       const fs = await import('fs');
       const stats = fs.statSync(filePath);
 
+      console.log(`文件上传成功: ${publicUrl}`);
+
       return {
         url: publicUrl,
         ossPath: finalOssPath,
@@ -140,8 +221,9 @@ export class OSSUploader {
         size: stats.size
       };
     } catch (error) {
-      console.error('OSS 文件上传失败:', error);
-      throw new Error(`OSS 文件上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      console.error('OSS 文件上传失败:', errorMsg);
+      throw new Error(`OSS 文件上传失败: ${errorMsg}`);
     }
   }
 
@@ -179,6 +261,32 @@ let ossUploader: OSSUploader | null = null;
  */
 export function initOSSUploader(config: OSSConfig): void {
   ossUploader = new OSSUploader(config);
+}
+
+/**
+ * 测试 OSS 连接
+ * 用于诊断OSS配置是否正确
+ */
+export async function testOSSConnection(): Promise<{ success: boolean; message: string }> {
+  try {
+    const uploader = getOSSUploader();
+
+    // 尝试列出bucket中的文件（只获取1个），不会产生额外费用
+    await (uploader as any).client.list({
+      'max-keys': 1
+    });
+
+    return {
+      success: true,
+      message: `OSS 连接测试成功，bucket: ${(uploader as any).bucket}`
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      message: `OSS 连接测试失败: ${errorMsg}`
+    };
+  }
 }
 
 /**

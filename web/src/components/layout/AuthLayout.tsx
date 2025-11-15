@@ -18,9 +18,9 @@ export default function AuthLayout({
   showBackToHome = true
 }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex relative overflow-hidden">
+    <div className="soft-blue-bg min-h-screen flex relative overflow-hidden">
       {/* 左侧装饰区域 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gray-50 dark:bg-gray-900 relative">
+      <div className="hidden lg:flex lg:w-1/2 relative glass">
         <div className="flex flex-col justify-center px-12 text-gray-900 dark:text-white">
           <div className="mb-12">
             <div className="w-16 h-16 bg-gray-900 dark:bg-white rounded-2xl flex items-center justify-center mb-6">

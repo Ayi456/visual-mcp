@@ -3,9 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import { CloudFunctionMCPHandler } from '../CloudFunctionMCPHandler.js';
+import { CloudFunctionMCPHandler } from '../server/CloudFunctionMCPHandler.js';
 import { authenticateUser } from '../middleware/authentication.js';
-import { UserManager } from '../UserManager.js';
+import { UserManager } from '../core/UserManager.js';
 import { User } from '../types.js';
 
 /**
@@ -18,7 +18,6 @@ export function setupMcpRoutes(
   sessionUserMap: Map<string, User>,
   userManager: UserManager
 ) {
-  // MCP 协议端点 - POST 请求处理客户端到服务器的通信
   app.post(['/mcp', '/mcp/'], async (req, res) => {
     if (!mcpServer) {
       return res.status(503).json({
@@ -50,19 +49,19 @@ export function setupMcpRoutes(
     );
 
     if (isCloudFunction) {
-      // 云函数环境：使用专门的处理器
+      if (authenticatedUser) {
+        (req as any).authenticatedUser = authenticatedUser;
+      }
       const cloudHandler = new CloudFunctionMCPHandler(mcpServer);
       return await cloudHandler.handleMCPRequest(req, res);
     }
 
     // 本地环境：使用传统的会话管理
     try {
-      // 修复 Accept 头部
       if (!req.headers.accept || !req.headers.accept.includes('text/event-stream')) {
         req.headers.accept = 'application/json, text/event-stream';
       }
 
-      // 检查现有会话ID
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       let transport: StreamableHTTPServerTransport;
 
@@ -76,11 +75,9 @@ export function setupMcpRoutes(
               mcpTransports[sessionId] = transport;
             }
 
-            // 存储认证用户信息
             const pendingUser = req.pendingUser;
             if (pendingUser) {
               sessionUserMap.set(sessionId, pendingUser);
-              console.log('待处理用户信息已存储到新会话:', { sessionId, userId: pendingUser.id });
               delete req.pendingUser;
             }
           }
@@ -90,7 +87,6 @@ export function setupMcpRoutes(
         if (!isCloudFunction) {
           transport.onclose = () => {
             if (transport.sessionId) {
-              console.log('Cleaning up transport for session:', transport.sessionId);
               delete mcpTransports[transport.sessionId];
               sessionUserMap.delete(transport.sessionId);
             }
@@ -130,7 +126,14 @@ export function setupMcpRoutes(
           sessionUserMap.set(currentSessionId, authenticatedUser);
           console.log('用户信息已存储到会话:', { sessionId: currentSessionId, userId: authenticatedUser.id });
         }
+        try {
+          (transport as any).authenticatedUser = authenticatedUser;
+        } catch {}
       }
+
+      try {
+        (transport as any).requestHeaders = req.headers;
+      } catch {}
 
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
@@ -159,7 +162,6 @@ export function setupMcpRoutes(
     await transport.handleRequest(req, res);
   });
 
-  // MCP 协议端点 - DELETE 请求处理会话终止
   app.delete(['/mcp', '/mcp/'], async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
     if (!sessionId || !mcpTransports[sessionId]) {

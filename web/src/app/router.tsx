@@ -10,6 +10,7 @@ const Register = lazy(() => import('@/app/auth/Register'))
 const ForgotPassword = lazy(() => import('@/app/auth/ForgotPassword'))
 const Account = lazy(() => import('@/app/account/Index'))
 const SqlConsole = lazy(() => import('@/app/sql/SqlConsole'))
+const DashboardRoutes = lazy(() => import('@/app/dashboard'))
 
 
 export const router = createBrowserRouter([
@@ -74,6 +75,16 @@ export const router = createBrowserRouter([
       <Suspense fallback={<PageLoader message="加载SQL控制台..." />}>
         <SqlConsole />
       </Suspense>
+    )
+  },
+  {
+    path: '/dashboard/*',
+    element: (
+      <ProtectedRoute>
+        <Suspense fallback={<PageLoader message="加载Dashboard..." />}>
+          <DashboardRoutes />
+        </Suspense>
+      </ProtectedRoute>
     )
   },
   {

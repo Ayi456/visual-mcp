@@ -1,6 +1,6 @@
 import express from 'express';
-import { UserManager } from '../UserManager.js';
-import { PanelManager } from '../PanelManager.js';
+import { UserManager } from '../core/UserManager.js';
+import { PanelManager } from '../core/PanelManager.js';
 import { createVisualization } from '../utils/visualization.js';
 
 export class VisualizationController {

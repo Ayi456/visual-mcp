@@ -1,6 +1,6 @@
 import express from 'express';
 import { PanelController } from '../controllers/PanelController.js';
-import { PanelManager } from '../PanelManager.js';
+import { PanelManager } from '../core/PanelManager.js';
 import { handlePrivateBucketAccess } from '../utils/ossProxy.js';
 
 /**

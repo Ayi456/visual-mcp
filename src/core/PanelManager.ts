@@ -4,7 +4,7 @@ import {
   PanelManagerOptions, 
   AddPanelResult, 
   PanelInfo
-} from './types.js';
+} from '../types.js';
 import { 
   generateSecureId, 
   isValidId, 
@@ -12,9 +12,9 @@ import {
   isExpired,
   generateCacheKey,
   formatDateTime
-} from './utils.js';
-import { executeMysqlQuery, executeRedisCommand, getRedisClient } from './database.js';
-import { ValidationError } from './utils/errors.js';
+} from '../utils.js';
+import { executeMysqlQuery, executeRedisCommand, getRedisClient } from '../config/database.js';
+import { ValidationError } from '../utils/errors.js';
 
 export class PanelManager {
   private options: Required<PanelManagerOptions>;
@@ -151,7 +151,7 @@ export class PanelManager {
   /**
    * 获取用户 Panels 列表
    */
-  async getUserPanels(args: import('./types.js').GetUserPanelsArgs): Promise<import('./types.js').UserPanelsResult> {
+  async getUserPanels(args: import('../types.js').GetUserPanelsArgs): Promise<import('../types.js').UserPanelsResult> {
     const { user_id, page = 1, limit = 10, status = 'all', is_public } = args;
     
     // 验证参数
@@ -204,7 +204,7 @@ export class PanelManager {
       );
       
       // 转换为 PanelInfo 格式并检查缓存状态
-      const panelInfos: import('./types.js').PanelInfo[] = await Promise.all(
+      const panelInfos: import('../types.js').PanelInfo[] = await Promise.all(
         panels.map(async (panel) => {
           const is_cached = await this.isPanelCached(panel.id);
           return {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { executeMysqlQuery } from '../../database.js';
+import { executeMysqlQuery } from '../../config/database.js';
 import { ValidationError } from '../../utils/errors.js';
 import { ValidationUtils } from '../../utils/ValidationUtils.js';
 import { UserUtils } from '../../utils/UserUtils.js';

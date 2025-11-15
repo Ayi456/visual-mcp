@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
 import { sqlApiService } from '../services/sqlApiService';
 import type { ChatSession, ChatMessage, ChatContext, Connection, QueryHistoryRecord } from '../types';
 import { CHAT_CONFIG, STORAGE_KEYS } from '../config/constants';
 import { checkSqlSafety } from '../utils/sqlSafety';
+
+enableMapSet();
 
 interface SqlChatStore {
   // 状态
@@ -34,8 +38,8 @@ interface SqlChatStore {
 }
 
 export const useSqlChatStore = create<SqlChatStore>()(
-  persist(
-    (set, get) => ({
+  immer(
+    persist((set, get) => ({
       currentSessionId: null,
       sessions: new Map(),
       isLoading: false,
@@ -70,11 +74,11 @@ export const useSqlChatStore = create<SqlChatStore>()(
             }
           };
           
-          set(state => ({
-            sessions: new Map(state.sessions).set(sessionId, newSession),
-            currentSessionId: sessionId,
-            isLoading: false
-          }));
+          set(state => {
+            state.sessions.set(sessionId, newSession);
+            state.currentSessionId = sessionId;
+            state.isLoading = false;
+          });
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : '初始化会话失败',
@@ -106,9 +110,9 @@ export const useSqlChatStore = create<SqlChatStore>()(
           }
         };
 
-        set(state => ({
-          sessions: new Map(state.sessions).set(currentSessionId, updatedSession)
-        }));
+        set(state => {
+          state.sessions.set(currentSessionId, updatedSession);
+        });
       },
 
       sendMessage: async (message: string, connection?: Connection, database?: string) => {
@@ -140,9 +144,9 @@ export const useSqlChatStore = create<SqlChatStore>()(
           lastActiveTime: new Date()
         };
 
-        set(state => ({
-          sessions: new Map(state.sessions).set(currentSessionId, updatedSession)
-        }));
+        set(state => {
+          state.sessions.set(currentSessionId, updatedSession);
+        });
 
         try {
           // 调用 SQL Chat API，传递数据库参数
@@ -256,10 +260,10 @@ export const useSqlChatStore = create<SqlChatStore>()(
             }
           };
 
-          set(state => ({
-            sessions: new Map(state.sessions).set(currentSessionId, finalSession),
-            isLoading: false
-          }));
+          set(state => {
+            state.sessions.set(currentSessionId, finalSession);
+            state.isLoading = false;
+          });
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : '发送消息失败',
@@ -278,13 +282,12 @@ export const useSqlChatStore = create<SqlChatStore>()(
       },
 
       clearSession: () => {
-        const { currentSessionId, sessions } = get();
+        const { currentSessionId } = get();
         if (currentSessionId) {
-          sessions.delete(currentSessionId);
-          set({ 
-            sessions: new Map(sessions),
-            currentSessionId: null,
-            error: null
+          set(state => {
+            state.sessions.delete(currentSessionId);
+            state.currentSessionId = null;
+            state.error = null;
           });
         }
       },
@@ -304,9 +307,9 @@ export const useSqlChatStore = create<SqlChatStore>()(
           }
         };
 
-        set(state => ({
-          sessions: new Map(state.sessions).set(currentSessionId, updatedSession)
-        }));
+        set(state => {
+          state.sessions.set(currentSessionId, updatedSession);
+        });
       },
 
       executeMessage: async (messageId: string, connection: Connection, database: string) => {
@@ -396,10 +399,10 @@ export const useSqlChatStore = create<SqlChatStore>()(
             messages: updatedMessages
           };
 
-          set(state => ({
-            sessions: new Map(state.sessions).set(currentSessionId, updatedSession),
-            isLoading: false
-          }));
+          set(state => {
+            state.sessions.set(currentSessionId, updatedSession);
+            state.isLoading = false;
+          });
         } catch (error) {
           const duration = Date.now() - startTime;
 
@@ -433,11 +436,11 @@ export const useSqlChatStore = create<SqlChatStore>()(
             messages: updatedMessages
           };
 
-          set(state => ({
-            sessions: new Map(state.sessions).set(currentSessionId, updatedSession),
-            error: error instanceof Error ? error.message : '执行失败',
-            isLoading: false
-          }));
+          set(state => {
+            state.sessions.set(currentSessionId, updatedSession);
+            state.error = error instanceof Error ? error.message : '执行失败';
+            state.isLoading = false;
+          });
         }
       },
 
@@ -477,13 +480,52 @@ export const useSqlChatStore = create<SqlChatStore>()(
         const updatedHistory = queryHistory.filter(item => item.id !== id);
         set({ queryHistory: updatedHistory });
       }
-    }),
-    {
+    }), {
       name: 'sql-chat-store',
-      partialize: (state) => ({
-        currentSessionId: state.currentSessionId,
-        queryHistory: state.queryHistory
-      })
-    }
+      version: 1,
+      partialize: (state) => {
+        const { currentSessionId, sessions, queryHistory } = state;
+
+        // 只持久化当前活跃会话（避免 localStorage 膨胀）
+        const currentSession = currentSessionId ? sessions.get(currentSessionId) : null;
+
+        return {
+          currentSessionId,
+          queryHistory,
+          // 只保存当前会话，使用对象格式便于序列化
+          currentSession: currentSession ? {
+            id: currentSession.id,
+            userId: currentSession.userId,
+            startTime: currentSession.startTime,
+            lastActiveTime: currentSession.lastActiveTime,
+            messages: currentSession.messages.map(msg => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              sql: msg.sql,
+              timestamp: msg.timestamp
+            })),
+            context: currentSession.context,
+            metadata: currentSession.metadata
+          } : null
+        };
+      },
+      // 从持久化数据恢复状态
+      merge: (persistedState: any, currentState: any) => {
+        const sessions = new Map(currentState.sessions);
+
+        // 恢复当前会话到 sessions Map
+        if (persistedState.currentSession) {
+          sessions.set(persistedState.currentSession.id, persistedState.currentSession);
+        }
+
+        return {
+          ...currentState,
+          currentSessionId: persistedState.currentSessionId,
+          queryHistory: persistedState.queryHistory || [],
+          sessions
+        };
+      }
+    })
   )
 );

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { executeMysqlQuery } from '../../database.js';
+import { executeMysqlQuery } from '../../config/database.js';
 import { ValidationUtils } from '../../utils/ValidationUtils.js';
 import { User } from '../../types.js';
 import { AuthService } from './AuthService.js';
@@ -45,7 +45,7 @@ export class PasswordResetService {
 
       if (isPhone && user.phone) {
         try {
-          const { getSmsService } = await import('../../SmsService.js');
+          const { getSmsService } = await import('../../core/SmsService.js');
           const smsService = getSmsService();
           const result = await smsService.sendVerifyCode(user.phone, 15);
 

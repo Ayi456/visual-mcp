@@ -36,9 +36,9 @@ export default function UsageGuideDialog({ open, onClose }: { open: boolean; onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl p-6">
+      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col p-6">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">选择输入方式</h3>
@@ -79,20 +79,25 @@ export default function UsageGuideDialog({ open, onClose }: { open: boolean; onC
 
 
         {/* Content */}
-        <div className="mt-3 relative">
-          <button
-            className="absolute right-2 top-2 z-10 px-2 py-1 rounded-md text-[15px] bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700"
-            onClick={() => copyText(tab === 'nl' ? samplePrompt : JSON.stringify(sampleJson, null, 2))}
-            title="复制示例到剪贴板"
-          >
-            {copied ? '已复制' : '复制示例'}
-          </button>
+        <div className="mt-3 flex-1 min-h-0 flex flex-col">
+          <div className="flex justify-between items-center mb-2 px-1">
+            <span className="text-xs text-gray-500 dark:text-gray-400">示例代码</span>
+            <button
+              className="px-3 py-1.5 rounded-md text-base bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              onClick={() => copyText(tab === 'nl' ? samplePrompt : JSON.stringify(sampleJson, null, 2))}
+              title="复制示例到剪贴板"
+            >
+              {copied ? '✓ 已复制' : '复制示例'}
+            </button>
+          </div>
 
-          {tab === 'nl' ? (
-            <pre className="code-block whitespace-pre-wrap !text-[12px] leading-relaxed">{samplePrompt}</pre>
-          ) : (
-            <pre className="code-block overflow-auto !text-[12px]">{JSON.stringify(sampleJson, null, 2)}</pre>
-          )}
+          <div className="flex-1 min-h-0 overflow-auto rounded-2xl border border-gray-200 dark:border-gray-700">
+            {tab === 'nl' ? (
+              <pre className="code-block whitespace-pre-wrap !text-[12px] leading-relaxed m-0" style={{ border: 'none', borderRadius: 0 }}>{samplePrompt}</pre>
+            ) : (
+              <pre className="code-block !text-[12px] m-0" style={{ whiteSpace: 'pre', border: 'none', borderRadius: 0 }}>{JSON.stringify(sampleJson, null, 2)}</pre>
+            )}
+          </div>
         </div>
 
       </div>

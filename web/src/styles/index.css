@@ -4,23 +4,22 @@
 
 :root {
   color-scheme: light dark;
-  /* 极简优雅配色 - 低饱和度渐变 */
   --gradient-primary: linear-gradient(135deg, #a8b3cf 0%, #b4a5c7 100%);
   --gradient-secondary: linear-gradient(135deg, #e5d9f2 0%, #f5e6e8 100%);
   --gradient-success: linear-gradient(135deg, #cfe9f3 0%, #d4f1f4 100%);
 
-  /* 优雅阴影系统 - 轻柔渐进 */
+
   --shadow-elegant-sm: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
   --shadow-elegant-md: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
   --shadow-elegant-lg: 0 8px 32px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
   --shadow-elegant-xl: 0 16px 48px rgba(0, 0, 0, 0.10), 0 8px 16px rgba(0, 0, 0, 0.05);
 
-  /* 高斯模糊强度 */
+
   --blur-subtle: blur(8px);
   --blur-medium: blur(16px);
   --blur-strong: blur(24px);
 
-  /* 字体尺寸系统 - 适中优雅 */
+
   --text-xs: 0.8125rem;    /* 13px */
   --text-sm: 0.9375rem;    /* 15px */
   --text-base: 1.0625rem;  /* 17px */
@@ -29,7 +28,7 @@
   --text-2xl: 2rem;        /* 32px */
   --text-3xl: 2.5rem;      /* 40px */
 
-  /* 间距系统 - 宽敞呼吸感 */
+
   --spacing-xs: 0.75rem;   /* 12px */
   --spacing-sm: 1rem;      /* 16px */
   --spacing-md: 1.5rem;    /* 24px */
@@ -46,7 +45,6 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-  /* 极简优雅背景 - 纯净渐变 */
   @apply bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-800;
   @apply dark:from-gray-950 dark:via-slate-950 dark:to-gray-900 dark:text-gray-100;
   min-height: 100vh;
@@ -58,7 +56,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 极简优雅滚动条 */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -77,7 +75,76 @@ body {
   @apply bg-gray-400/60 dark:bg-gray-600/60;
 }
 
-/* 优雅渐入动画 - 流畅自然 */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.soft-blue-bg {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(56,189,248,.12), transparent 60%),
+    radial-gradient(900px 500px at 110% 20%, rgba(6,182,212,.10), transparent 60%),
+    linear-gradient(180deg, #F0F9FF 0%, #F8FAFC 40%, #ECFEFF 100%);
+}
+.dark .soft-blue-bg {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(56,189,248,.06), transparent 60%),
+    radial-gradient(900px 500px at 110% 20%, rgba(34,211,238,.05), transparent 60%),
+    linear-gradient(180deg, #0B1220 0%, #0B1320 60%, #0A1720 100%);
+}
+
+/* 渐变流体设计背景 */
+.fluid-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 45%, #f093fb 100%);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+.dark .fluid-bg {
+  background: linear-gradient(135deg, #0b1020 0%, #141433 45%, #2a1b3d 100%);
+}
+
+/* 背景流体 Blob 元素 */
+.fluid-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  animation: blob-move 22s ease-in-out infinite alternate;
+}
+.dark .fluid-blob { opacity: 0.35; mix-blend-mode: lighten; filter: blur(52px); }
+
+.fluid-blob.blob-a { width: 520px; height: 520px; left: -120px; top: -120px; background: radial-gradient(circle at 30% 30%, rgba(102,126,234,.8), rgba(118,75,162,.5) 60%, transparent 70%); }
+.fluid-blob.blob-b { width: 420px; height: 420px; right: -140px; top: 10%; background: radial-gradient(circle at 60% 40%, rgba(240,147,251,.75), rgba(118,75,162,.5) 60%, transparent 70%); animation-delay: 3s; }
+.fluid-blob.blob-c { width: 480px; height: 480px; left: 20%; bottom: -160px; background: radial-gradient(circle at 40% 60%, rgba(93,201,248,.7), rgba(102,126,234,.5) 60%, transparent 70%); animation-delay: 6s; }
+
+@keyframes blob-move {
+  0%   { transform: translate(0, 0) scale(1); }
+  40%  { transform: translate(20px, -30px) scale(1.05); }
+  70%  { transform: translate(-20px, 30px) scale(0.98); }
+  100% { transform: translate(0, 0) scale(1.02); }
+}
+
+/* 顶部波浪条（可选装饰） */
+.fluid-wave {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 140px;
+  pointer-events: none;
+}
+.fluid-wave svg { width: 100%; height: 100%; display: block; opacity: .22; }
+.fluid-wave path { animation: wave-shift 12s ease-in-out infinite; }
+@keyframes wave-shift {
+  0%,100% { transform: translateX(0); }
+  50% { transform: translateX(-40px); }
+}
+
+/* 玻璃态卡片增强（在 card-modern 基础上更通透） */
+.card-glass {
+  @apply bg-white/70 dark:bg-gray-900/70;
+  backdrop-filter: var(--blur-strong);
+  -webkit-backdrop-filter: var(--blur-strong);
+}
+
 .animate-fade-in {
   animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -127,7 +194,24 @@ body {
   }
 }
 
-/* 高斯模糊玻璃态效果 - 极简优雅 */
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+
 .glass {
   @apply bg-white/60 dark:bg-gray-900/60;
   backdrop-filter: var(--blur-medium);
@@ -144,7 +228,7 @@ body {
   box-shadow: var(--shadow-elegant-md);
 }
 
-/* 极简优雅按钮 - 轻盈灵动 */
+
 .btn-gradient {
   @apply bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900;
   @apply font-medium rounded-2xl;
@@ -174,7 +258,7 @@ body {
   box-shadow: none;
 }
 
-/* 极简优雅输入框 - 呼吸感 */
+
 .input-modern {
   @apply w-full rounded-2xl border border-gray-200/60 dark:border-gray-700/60;
   @apply bg-white/80 dark:bg-gray-900/80;
@@ -199,7 +283,7 @@ body {
   font-weight: 400;
 }
 
-/* 极简优雅卡片 - 高斯模糊 */
+
 .card-modern {
   @apply bg-white/80 dark:bg-gray-900/80;
   backdrop-filter: var(--blur-medium);
@@ -217,7 +301,7 @@ body {
   border-color: rgba(0, 0, 0, 0.08);
 }
 
-/* 代码块样式 - 优雅舒适 */
+
 .code-block {
   @apply bg-gray-50/80 dark:bg-gray-900/80;
   backdrop-filter: var(--blur-subtle);
@@ -231,15 +315,20 @@ body {
   box-shadow: var(--shadow-elegant-sm);
 }
 
-/* 字号覆盖 */
+
 .code-block.text-\[15px\] { font-size: 15px !important; }
 .code-block.text-\[16px\] { font-size: 16px !important; }
 .code-block.text-\[17px\] { font-size: 17px !important; }
 .code-block.text-\[18px\] { font-size: 18px !important; }
 
-/* 优雅浮动动画 - 轻盈 */
+
 .animate-float {
   animation: float 8s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 8s ease-in-out infinite;
+  animation-delay: 2s;
 }
 
 .animate-glow {
@@ -248,6 +337,32 @@ body {
 
 .animate-pulse-slow {
   animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.bar-grow {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: barGrow 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+  will-change: transform;
+}
+.bar-delay-1 { animation-delay: .1s; }
+.bar-delay-2 { animation-delay: .25s; }
+.bar-delay-3 { animation-delay: .4s; }
+.bar-delay-4 { animation-delay: .55s; }
+
+@keyframes barGrow {
+  from { transform: scaleY(0.7); }
+  to   { transform: scaleY(1); }
+}
+
+.animate-draw-line {
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  animation: drawLine 1.8s ease forwards;
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
 }
 
 @keyframes float {
@@ -268,7 +383,6 @@ body {
   }
 }
 
-/* 极简优雅渐变文字 - 低饱和 */
 .text-gradient {
   @apply bg-gradient-to-r from-gray-700 via-gray-600 to-gray-800 bg-clip-text text-transparent;
   font-weight: 500;
@@ -289,7 +403,6 @@ body {
   font-weight: 500;
 }
 
-/* 优雅悬浮效果 - 平滑过渡 */
 .card-hover {
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -299,12 +412,12 @@ body {
   transform: translateY(-6px) scale(1.01);
 }
 
-/* 进度条动画 - 流畅 */
+
 .progress-bar {
   transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 优雅脉冲边框 - 柔和 */
+
 .pulse-border {
   position: relative;
 }
@@ -335,7 +448,6 @@ body {
   }
 }
 
-/* 全局优雅辅助类 */
 .elegant-section {
   padding: var(--spacing-xl) var(--spacing-lg);
 }
@@ -356,7 +468,6 @@ body {
   margin-right: var(--spacing-lg);
 }
 
-/* 标题优雅层级 */
 h1, .h1 {
   font-size: var(--text-3xl);
   font-weight: 600;

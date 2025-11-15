@@ -1,5 +1,5 @@
-import { CleanupConfig } from './types.js';
-import { cleanupExpiredPanels } from './database.js';
+import { CleanupConfig } from '../types.js';
+import { cleanupExpiredPanels } from '../config/database.js';
 
 /**
  * 数据库清理调度器

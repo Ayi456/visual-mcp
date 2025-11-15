@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
 import MessageView from './MessageView';
 import MessageInput, { MessageInputRef } from './MessageInput';
 import SqlEditor from '../SqlEditor';
@@ -23,25 +23,25 @@ const ConversationView = forwardRef<ConversationViewRef, Props>(({ currentConnec
   const [showSqlEditor, setShowSqlEditor] = useState(false);
   const [sqlEditorValue, setSqlEditorValue] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
-  
+
   // 暴露插入文本的方法给父组件
   useImperativeHandle(ref, () => ({
     insertText: (text: string) => {
       messageInputRef.current?.insertText(text);
     }
   }));
-  
-  const { 
-    getCurrentSession, 
+
+  const {
+    getCurrentSession,
     sendMessage,
-    addMessage, 
-    isLoading, 
-    error 
+    addMessage,
+    isLoading,
+    error
   } = useSqlChatStore();
-  
+
   const currentSession = getCurrentSession();
   const messages = currentSession?.messages || [];
-  const displayMessages = messages.filter(m => m.role !== 'system');
+  const displayMessages = useMemo(() => messages.filter(m => m.role !== 'system'), [messages]);
 
   // 自动滚动到底部
   const scrollToBottom = () => {
@@ -99,7 +99,8 @@ const ConversationView = forwardRef<ConversationViewRef, Props>(({ currentConnec
         rows,
         rowCount: Array.isArray(rows) ? rows.length : 0,
         executionTime: execResult.executionTime || 0,
-        affectedRows: execResult.affectedRows
+        // 只在 affectedRows 存在且大于0时才包含此字段
+        ...(execResult.affectedRows && execResult.affectedRows > 0 ? { affectedRows: execResult.affectedRows } : {})
       };
       
       // 添加系统类结果消息（仅用于 ExecutionView 展示，不进入对话区）

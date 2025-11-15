@@ -1,21 +1,22 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { PanelManager } from './PanelManager.js';
-import { HttpServerConfig } from './types.js';
-import { UserManager } from './UserManager.js';
-import { initSmsService } from './SmsService.js';
-import { SqlAiService } from './services/SqlAiService.js';
-import { User } from './types.js';
+import { PanelManager } from '../core/PanelManager.js';
+import { HttpServerConfig } from '../types.js';
+import { UserManager } from '../core/UserManager.js';
+import { initSmsService } from '../core/SmsService.js';
+import { SqlAiService } from '../services/SqlAiService.js';
+import { User } from '../types.js';
 
 // Middleware
-import { configureCors } from './middleware/cors.js';
-import { configureBodyParser } from './middleware/bodyParser.js';
-import { notFoundHandler, globalErrorHandler } from './middleware/errorHandler.js';
+import { configureCors } from '../middleware/cors.js';
+import { configureBodyParser } from '../middleware/bodyParser.js';
+import { notFoundHandler, globalErrorHandler } from '../middleware/errorHandler.js';
 
 // Routes
-import { setupAllRoutes } from './routes/index.js';
+import { setupAllRoutes } from '../routes/index.js';
 
 /**
  * HTTP 服务器类
@@ -72,6 +73,20 @@ export class HttpRedirectServer {
    * 设置中间件
    */
   private setupMiddleware(): void {
+    // 压缩中间件 - 放在最前面以压缩所有响应
+    this.app.use(compression({
+      filter: (req, res) => {
+        // 不压缩明确要求不压缩的请求
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        // 默认使用compression的过滤器
+        return compression.filter(req, res);
+      },
+      level: 6, // 压缩级别 1-9，6是平衡速度和压缩率的值
+      threshold: 1024, // 只压缩大于1KB的响应
+    }));
+
     // CORS 配置
     const corsOptions = configureCors();
     this.app.use(cors(corsOptions));

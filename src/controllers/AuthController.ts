@@ -1,6 +1,6 @@
 import express from 'express';
-import { UserManager } from '../UserManager.js';
-import { getSmsService } from '../SmsService.js';
+import { UserManager } from '../core/UserManager.js';
+import { getSmsService } from '../core/SmsService.js';
 import { ValidationError } from '../utils/errors.js';
 
 

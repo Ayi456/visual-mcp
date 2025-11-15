@@ -1,5 +1,5 @@
 import express from 'express';
-import { UserManager } from '../UserManager.js';
+import { UserManager } from '../core/UserManager.js';
 
 export class UserController {
   constructor(private userManager: UserManager) {}

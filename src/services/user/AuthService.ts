@@ -1,5 +1,5 @@
 import argon2 from 'argon2';
-import { executeMysqlQuery } from '../../database.js';
+import { executeMysqlQuery } from '../../config/database.js';
 import { ValidationError } from '../../utils/errors.js';
 import { ValidationUtils } from '../../utils/ValidationUtils.js';
 import { UserUtils } from '../../utils/UserUtils.js';
@@ -174,7 +174,7 @@ export class AuthService {
       const cleanAccessId = accessId.trim();
       let cleanAccessKey = accessKey.trim().replace(/\s/g, '');
       cleanAccessKey = cleanAccessKey.replace(/^[\"']+|[\"']+$/g, '');
-      
+
       if (cleanAccessKey.length !== 64) {
         console.error('AccessKey 长度不正确:', {
           accessId: cleanAccessId,
@@ -185,7 +185,7 @@ export class AuthService {
           last10Chars: cleanAccessKey.substring(cleanAccessKey.length - 10)
         });
       }
-      
+
       if (!/^[a-f0-9]{64}$/i.test(cleanAccessKey)) {
         console.error('AccessKey 格式不正确（应为64位十六进制字符串）:', {
           accessId: cleanAccessId,

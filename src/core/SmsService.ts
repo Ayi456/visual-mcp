@@ -1,5 +1,5 @@
 import * as tencentcloud from "tencentcloud-sdk-nodejs-sms";
-import { executeMysqlQuery, executeRedisCommand, getRedisClient } from './database.js';
+import { executeMysqlQuery, executeRedisCommand, getRedisClient } from '../config/database.js';
 import crypto from 'crypto';
 
 const SmsClient = tencentcloud.sms.v20210111.Client;

@@ -1,5 +1,5 @@
 import express from 'express';
-import { UserManager } from '../UserManager.js';
+import { UserManager } from '../core/UserManager.js';
 
 export class QuotaController {
   constructor(private userManager: UserManager) {}

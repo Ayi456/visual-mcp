@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
+interface Dashboard {
+  id: string;
+  title: string;
+}
+
 interface VisualizationConfigDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -8,27 +13,29 @@ interface VisualizationConfigDialogProps {
     rows: any[];
   };
   onConfirm: (config: VisualizationConfig) => void;
+  dashboards?: Dashboard[]; // 可选：用户的Dashboard列表
 }
 
 export interface VisualizationConfig {
   chartType: string;
   title: string;
-  theme: string;
   xAxis?: string;
   yAxis?: string;
+  dashboardId?: string;
 }
 
 const VisualizationConfigDialog: React.FC<VisualizationConfigDialogProps> = ({
   isOpen,
   onClose,
   queryResult,
-  onConfirm
+  onConfirm,
+  dashboards = [] // 默认空数组
 }) => {
   const [chartType, setChartType] = useState<string>('auto');
   const [title, setTitle] = useState<string>('查询结果可视化');
-  const [theme, setTheme] = useState<string>('default');
   const [xAxis, setXAxis] = useState<string>('');
   const [yAxis, setYAxis] = useState<string>('');
+  const [dashboardId, setDashboardId] = useState<string>('');
 
   // 智能推荐图表类型（前端简易版）
   useEffect(() => {
@@ -58,9 +65,9 @@ const VisualizationConfigDialog: React.FC<VisualizationConfigDialogProps> = ({
     onConfirm({
       chartType,
       title,
-      theme,
       xAxis,
-      yAxis
+      yAxis,
+      dashboardId: dashboardId || undefined
     });
   };
 
@@ -114,33 +121,6 @@ const VisualizationConfigDialog: React.FC<VisualizationConfigDialogProps> = ({
           />
         </div>
 
-        {/* 主题选择 */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            主题风格
-          </label>
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { value: 'default', label: '默认' },
-              { value: 'dark', label: '深色' },
-              { value: 'business', label: '商务' },
-              { value: 'colorful', label: '彩色' }
-            ].map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setTheme(t.value)}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  theme === t.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* X轴/Y轴选择（可选） */}
         {queryResult.columns.length > 1 && (
           <div className="mb-4">
@@ -179,6 +159,30 @@ const VisualizationConfigDialog: React.FC<VisualizationConfigDialogProps> = ({
                 </select>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Dashboard选择器（新增） */}
+        {dashboards.length > 0 && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              添加到 Dashboard（可选）
+            </label>
+            <select
+              value={dashboardId}
+              onChange={(e) => setDashboardId(e.target.value)}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">不添加到Dashboard</option>
+              {dashboards.map((dashboard) => (
+                <option key={dashboard.id} value={dashboard.id}>
+                  {dashboard.title}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              选择后，生成的图表将自动添加到该 Dashboard 中
+            </p>
           </div>
         )}
 

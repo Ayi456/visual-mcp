@@ -1,5 +1,5 @@
-import { UserManager } from './UserManager.js';
-import { getSmsService } from './SmsService.js';
+import { UserManager } from '../core/UserManager.js';
+import { getSmsService } from '../core/SmsService.js';
 
 export class QuotaScheduler {
   private userManager: UserManager;

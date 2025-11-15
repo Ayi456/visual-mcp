@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateSignedUrl } from '../OssUploader.js';
+import { generateSignedUrl } from '../core/OssUploader.js';
 
 /**
  * 处理私有 Bucket 访问
@@ -20,7 +20,9 @@ export async function handlePrivateBucketAccess(
     if (objectKey.startsWith('http')) {
       try {
         const url = new URL(objectKey);
-        objectKey = url.pathname.substring(1);
+        // 完整保留路径，包括所有目录层级，使用 decodeURIComponent 正确解码
+        objectKey = decodeURIComponent(url.pathname.substring(1));
+        console.log(`从URL提取对象路径: ${objectKey}`);
       } catch (error) {
         console.error('解析OSS URL失败:', error);
         if (!res.headersSent) {

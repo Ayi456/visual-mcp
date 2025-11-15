@@ -11,10 +11,10 @@ const QueryStats: React.FC<QueryStatsProps> = ({ result, sql }) => {
   return (
     <div className="space-y-4">
       {/* 基本统计 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard
           label="行数"
-          value={result.rowCount}
+          value={result.rows.length}
           icon="📊"
         />
         <StatCard
@@ -26,11 +26,6 @@ const QueryStats: React.FC<QueryStatsProps> = ({ result, sql }) => {
           label="执行时间"
           value={`${result.executionTime || 0}ms`}
           icon="⏱️"
-        />
-        <StatCard
-          label="影响行数"
-          value={result.affectedRows || 0}
-          icon="✅"
         />
       </div>
 

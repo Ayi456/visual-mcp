@@ -4,9 +4,8 @@
 export type DataType = 'number' | 'string' | 'date' | 'boolean';
 
 // 图表类型定义
-export type ChartType = 'line' | 'bar' | 'pie' | 'scatter' | 'radar' | 'area' | 'heatmap' | 'bubble' | 'auto';
+export type ChartType = 'line' | 'bar' | 'pie' | 'scatter' | 'radar' | 'area' | 'heatmap' | 'bubble' | 'auto' | 'combo' | 'funnel' | 'sankey' | 'treemap' | 'gauge' | 'waterfall' | 'boxplot';
 
-// Schema字段接口
 export interface SchemaField {
   name: string;
   type: DataType;
@@ -50,6 +49,29 @@ export interface StyleConfig {
   showLegend?: boolean;
   showGrid?: boolean;
   showTooltips?: boolean;
+  lineWidth?: number;
+  pointStyle?: 'circle' | 'cross' | 'crossRot' | 'dash' | 'line' | 'rect' | 'rectRounded' | 'rectRot' | 'star' | 'triangle';
+  pointRadius?: number;
+  tension?: number;
+  fill?: boolean;
+  legendPosition?: 'top' | 'bottom' | 'left' | 'right';
+  isMultiSeries?: boolean;
+  // 数据标签配置
+  dataLabels?: {
+    show?: boolean;
+    position?: 'top' | 'center' | 'bottom' | 'inside' | 'outside';
+    formatter?: string;
+  };
+  // 网格线样式
+  gridStyle?: {
+    type?: 'solid' | 'dashed' | 'dotted';
+    opacity?: number;
+  };
+  // 缩放控制
+  zoom?: {
+    enabled?: boolean;
+    type?: 'x' | 'y' | 'xy';
+  };
 }
 
 // 可视化数据接口

@@ -1,7 +1,6 @@
 import { ApiResponse, ApiErrorResponse } from '@/types/api'
 import { NetworkError, AuthError, standardizeError } from '@/utils/errors'
-import { getStorageItem } from '@/utils/storage'
-import { cleanAccessKey } from '@/utils/cleanAccessKey'
+import { getAuthHeaders } from '@/utils/auth'
 
 const runtimeOrigin = typeof window !== 'undefined' ? window.location.origin : ''
 let resolvedBase = (import.meta as any).env?.VITE_API_BASE || (runtimeOrigin || 'http://localhost:3000')
@@ -16,22 +15,6 @@ if (typeof window !== 'undefined') {
 
 export const API_BASE = resolvedBase
 
-/**
- * 获取认证头部信息
- * @returns 包含认证信息的头部对象
- */
-function getAuthHeaders(): Record<string, string> {
-  try {
-    const accessKey = cleanAccessKey(getStorageItem('accessKey'))
-    if (!accessKey) return {}
-
-    // 使用 AccessKey 头，与后端期望的头名称一致
-    return { AccessKey: `${accessKey}` }
-  } catch (error) {
-    console.warn('Failed to get auth headers:', error)
-    return {}
-  }
-}
 
 /**
  * 构建带查询参数的 URL

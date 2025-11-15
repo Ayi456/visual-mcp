@@ -1,5 +1,5 @@
 import express from 'express';
-import { UserManager } from '../UserManager.js';
+import { UserManager } from '../core/UserManager.js';
 import { User } from '../types.js';
 declare global {
   namespace Express {

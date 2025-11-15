@@ -1,6 +1,6 @@
 import express from 'express';
-import { PanelManager } from '../PanelManager.js';
-import { generateSignedUrl } from '../OssUploader.js';
+import { PanelManager } from '../core/PanelManager.js';
+import { generateSignedUrl } from '../core/OssUploader.js';
 
 export class PanelController {
   constructor(private panelManager: PanelManager) {}
@@ -137,7 +137,9 @@ export class PanelController {
       if (objectKey.startsWith('http')) {
         try {
           const url = new URL(objectKey);
-          objectKey = url.pathname.substring(1);
+          // 完整保留路径，包括所有目录层级，使用 decodeURIComponent 正确解码
+          objectKey = decodeURIComponent(url.pathname.substring(1));
+          console.log(`从URL提取对象路径: ${objectKey}`);
         } catch (error) {
           console.error('解析OSS URL失败:', error);
           return res.status(500).json({

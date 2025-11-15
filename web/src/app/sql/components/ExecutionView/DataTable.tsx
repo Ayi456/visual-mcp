@@ -1,18 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { QueryResult } from '../../types';
 import { EmptyState } from '../common';
 import VisualizationConfigDialog, { VisualizationConfig } from '../VisualizationConfigDialog';
 import { sqlApiService } from '../../services/sqlApiService';
+import { dashboardApiService } from '../../../dashboard/services/dashboardApiService';
+import { useSqlChatStore } from '../../stores/useSqlChat';
+import useAuth from '@/store/useAuth';
+import { toast } from '@/hooks/useToast';
 
 interface DataTableProps {
   data: QueryResult;
+  query?: string; // 添加查询SQL
 }
 
-const DataTable: React.FC<DataTableProps> = ({ data }) => {
+interface Dashboard {
+  id: string;
+  title: string;
+}
+
+const DataTable: React.FC<DataTableProps> = ({ data, query }) => {
+  const navigate = useNavigate();
+  const { currentSessionId } = useSqlChatStore();
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [visualizationUrl, setVisualizationUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dashboards, setDashboards] = useState<Dashboard[]>([]); // 用户的Dashboard列表
+  const [quotaMessage, setQuotaMessage] = useState<string | null>(null); // 配额消息
+
+  // 加载用户的Dashboard列表
+  useEffect(() => {
+    const loadDashboards = async () => {
+      try {
+        const list = await dashboardApiService.getDashboardList(user?.id);
+        setDashboards(list.map(d => ({ id: d.id, title: d.title })));
+      } catch (error) {
+        console.error('加载Dashboard列表失败:', error);
+      }
+    };
+    loadDashboards();
+  }, [user]);
 
   if (!data || data.rows.length === 0) {
     return (
@@ -27,63 +56,48 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     setIsGenerating(true);
     setIsDialogOpen(false);
     setError(null);
+    setQuotaMessage(null);
 
     try {
-      // 将查询结果转换为二维数组格式
-      const dataArray = data.rows.map(row =>
-        data.columns.map(col => row[col])
-      );
-
-      // 推断字段类型
-      const schema = data.columns.map(col => {
-        const firstValue = data.rows[0]?.[col];
-        let type = 'string';
-
-        if (typeof firstValue === 'number' || !isNaN(Number(firstValue))) {
-          type = 'number';
-        } else if (firstValue instanceof Date ||
-                   (typeof firstValue === 'string' && !isNaN(Date.parse(firstValue)))) {
-          type = 'date';
-        } else if (typeof firstValue === 'boolean') {
-          type = 'boolean';
-        }
-
-        return { name: col, type };
+      // 调用新的 generateChart API
+      const result = await sqlApiService.generateChart({
+        sql: query || '',
+        queryResult: {
+          columns: data.columns,
+          rows: data.rows
+        },
+        chartConfig: {
+          type: config.chartType,
+          title: config.title,
+          xAxis: config.xAxis,
+          yAxis: config.yAxis
+        },
+        dashboardId: config.dashboardId
       });
-
-      console.log('准备可视化数据:', {
-        dataRows: dataArray.length,
-        schema,
-        config
-      });
-
-      // 调用 API
-      const result = await sqlApiService.visualizeQueryResult({
-        data: dataArray,
-        schema,
-        chartType: config.chartType,
-        title: config.title,
-        style: {
-          theme: config.theme,
-          animation: true,
-          responsive: true,
-          showLegend: true
-        }
-      });
-
-      console.log('可视化结果:', result);
 
       setVisualizationUrl(result.panelUrl);
+      setQuotaMessage(result.message);
 
-      // 自动打开新窗口
-      window.open(result.panelUrl, '_blank');
+      // 如果添加到了Dashboard，跳转到Dashboard页面
+      if (result.addedToDashboard && result.dashboardId) {
+        toast.success('图表已添加，正在跳转到 Dashboard...');
+        setTimeout(() => navigate(`/dashboard/${result.dashboardId}`), 500);
+      } else {
+        // 否则打开可视化图表页面
+        window.open(result.panelUrl, '_blank');
+      }
 
     } catch (error: any) {
-      console.error('可视化失败:', error);
-      setError(error.message || '可视化生成失败');
+      console.error('图表生成失败:', error);
+      setError(error.message || '图表生成失败');
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleAddToDashboard = () => {
+    // 直接打开可视化对话框，用户可以在对话框中选择Dashboard
+    setIsDialogOpen(true);
   };
 
   return (
@@ -94,14 +108,25 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           <div className="text-sm text-gray-600 dark:text-gray-400">
             查询结果: {data.rows.length} 行
           </div>
-          <button
-            onClick={() => setIsDialogOpen(true)}
-            disabled={isGenerating || data.rows.length === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-          >
-            <span>📊</span>
-            <span>{isGenerating ? '生成中...' : '可视化'}</span>
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleAddToDashboard}
+              disabled={data.rows.length === 0}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              title="将此查询结果添加到 Dashboard"
+            >
+              <span>📌</span>
+              <span>添加到 Dashboard</span>
+            </button>
+            <button
+              onClick={() => setIsDialogOpen(true)}
+              disabled={isGenerating || data.rows.length === 0}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              <span>📊</span>
+              <span>{isGenerating ? '生成中...' : '可视化'}</span>
+            </button>
+          </div>
         </div>
 
         {/* 可视化链接展示 */}
@@ -110,6 +135,11 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
             <div className="flex items-center justify-between">
               <div className="text-sm text-green-800 dark:text-green-200">
                 ✅ 图表已生成！
+                {quotaMessage && (
+                  <div className="text-xs mt-1 text-green-700 dark:text-green-300">
+                    {quotaMessage}
+                  </div>
+                )}
                 <a
                   href={visualizationUrl}
                   target="_blank"
@@ -129,7 +159,6 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           </div>
         )}
 
-        {/* 错误提示 */}
         {error && (
           <div className="mb-3 mx-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
             <div className="text-sm text-red-800 dark:text-red-200">
@@ -169,6 +198,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         onClose={() => setIsDialogOpen(false)}
         queryResult={{ columns: data.columns, rows: data.rows }}
         onConfirm={handleVisualize}
+        dashboards={dashboards} // 传递Dashboard列表
       />
     </>
   );

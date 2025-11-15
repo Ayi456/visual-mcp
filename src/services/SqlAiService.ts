@@ -461,7 +461,7 @@ export class SqlAiService {
     }
 
     try {
-      const { getRedisClient } = await import('../database.js');
+      const { getRedisClient } = await import('../config/database.js');
       const redis = getRedisClient();
       const cacheKey = this.generateCacheKey(message, context);
       const cached = await redis.get(cacheKey);
@@ -491,7 +491,7 @@ export class SqlAiService {
     }
 
     try {
-      const { getRedisClient } = await import('../database.js');
+      const { getRedisClient } = await import('../config/database.js');
       const redis = getRedisClient();
       const cacheKey = this.generateCacheKey(message, context);
       const ttl = this.calculateCacheTTL(result);

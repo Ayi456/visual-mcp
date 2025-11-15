@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import useAuth from '@/store/useAuth';
 import ConversationView, { ConversationViewRef } from './components/ConversationView';
@@ -18,6 +18,7 @@ const SqlConsole: React.FC = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [showExecutionView, setShowExecutionView] = useState(true); // 默认显示结果面板
   const [showHistorySidebar, setShowHistorySidebar] = useState(false); // 默认隐藏历史侧边栏
@@ -66,6 +67,25 @@ const SqlConsole: React.FC = () => {
 
       try {
         setIsLoading(true);
+
+        // 检查 URL 参数中是否有 returnSession（从 dashboard 返回）
+        const searchParams = new URLSearchParams(location.search);
+        const returnSessionId = searchParams.get('returnSession');
+
+        // 如果有返回的 sessionId 且当前会话存在，直接使用
+        if (returnSessionId && currentSession?.id === returnSessionId) {
+          console.log('从 Dashboard 返回，恢复会话:', returnSessionId);
+          setIsLoading(false);
+          return;
+        }
+
+        // 如果当前已有会话，不重新初始化
+        if (currentSession) {
+          console.log('使用已存在的会话:', currentSession.id);
+          setIsLoading(false);
+          return;
+        }
+
         // TODO: 加载用户连接
         // await loadConnections(user.id);
         // 初始化聊天会话
@@ -78,7 +98,7 @@ const SqlConsole: React.FC = () => {
     };
 
     init();
-  }, [user?.id]);
+  }, [user?.id, location.search]);
 
 
   if (isLoading) {
@@ -93,9 +113,9 @@ const SqlConsole: React.FC = () => {
   }
 
   return (
-    <div className="sql-console flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="sql-console bg-white dark:bg-gray-950 flex h-screen">
       {/* 左侧连接管理栏 */}
-      <div className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 overflow-y-auto flex-shrink-0">
+      <div className="w-80 glass border-r border-gray-200/40 dark:border-gray-800/40 p-4 overflow-y-auto flex-shrink-0">
         <h2 className="text-lg font-semibold mb-4">数据库连接</h2>
 
         {/* 连接管理组件 */}
@@ -115,7 +135,7 @@ const SqlConsole: React.FC = () => {
       {/* 中间主要内容区 */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* 顶部工具栏 */}
-        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 bg-white dark:bg-gray-800">
+        <div className="glass border border-gray-200/40 dark:border-gray-800/40 rounded-xl px-4 py-3 mx-3 my-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center space-x-4 min-w-0 flex-1">
               <button
@@ -129,11 +149,7 @@ const SqlConsole: React.FC = () => {
                 </svg>
                 <span className="text-sm">返回</span>
               </button>
-              <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex-shrink-0">
-                SQL Chat
-              </h1>
-
-              {/* 连接状态 - 与标题并排 */}
+              {/* 连接状态 */}
               {selectedConnection ? (
                 <div className="min-w-0 flex-1">
                   <ConnectionStatusIndicator
@@ -220,7 +236,7 @@ const SqlConsole: React.FC = () => {
       {showHistorySidebar && (
         <QueryHistorySidebar
           onSelectHistoryItem={handleSelectHistoryItem}
-          className="w-96 flex-shrink-0"
+          className="w-96 flex-shrink-0 glass border-l border-gray-200/40 dark:border-gray-800/40"
         />
       )}
 

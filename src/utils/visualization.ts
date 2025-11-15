@@ -1,4 +1,4 @@
-import { PanelManager } from '../PanelManager.js';
+import { PanelManager } from '../core/PanelManager.js';
 
 /**
  * 创建可视化图表
@@ -26,7 +26,7 @@ export async function createVisualization(params: {
   const { generateVisualizationHtml } = await import('../utils/htmlGenerator.js');
   const { recommendChartType } = await import('../utils/dataTypeDetector.js');
   const { getChartTypeName } = await import('../utils/htmlGenerator.js');
-  const { getOSSUploader, isOSSUploaderInitialized } = await import('../OssUploader.js');
+  const { getOSSUploader, isOSSUploaderInitialized } = await import('../core/OssUploader.js');
 
   // 将传入的 schema 转换为 SchemaField[] 类型
   const normalizedSchema: Array<{ name: string; type: 'string' | 'number' | 'date' | 'boolean' }> = schema.map(field => {

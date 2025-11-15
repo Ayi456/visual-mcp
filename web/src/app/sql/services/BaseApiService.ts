@@ -5,6 +5,7 @@
 
 import { API_CONFIG, ERROR_MESSAGES } from '../config/constants';
 import { ApiResponse } from '../types';
+import { getAuthHeaders } from '@/utils/auth';
 
 export interface RequestOptions extends RequestInit {
   retry?: boolean;
@@ -29,23 +30,7 @@ export class BaseApiService {
    * 获取认证headers
    */
   protected getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {};
-    
-    try {
-      // 从localStorage获取认证信息
-      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-      const accessId = userInfo.access_id;
-      const accessKey = localStorage.getItem('accessKey');
-      
-      if (accessId && accessKey) {
-        headers['AccessID'] = accessId;
-        headers['AccessKey'] = accessKey;
-      }
-    } catch (error) {
-      console.warn('Failed to get auth headers:', error);
-    }
-    
-    return headers;
+    return getAuthHeaders();
   }
 
   /**

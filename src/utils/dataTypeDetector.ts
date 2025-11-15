@@ -90,29 +90,94 @@ export function identifyDataType(values: any[]): DataType {
   return 'string';
 }
 
-// 简化的智能图表类型推荐
+// 智能图表类型推荐（auto 模式）
+// 目标：覆盖常见场景，同时保持保守，不轻易选过于“重”的高级图表
 export function recommendChartType(schema: SchemaField[], data: any[][]): ChartType {
-  if (schema.length < 2) return 'bar';
-
-  const [xField, yField] = schema;
-  const uniqueXValues = new Set(data.map(row => row[0])).size;
-
-  // 数值 vs 数值 -> 散点图
-  if (xField.type === 'number' && yField.type === 'number') {
-    return 'scatter';
+  if (!schema || schema.length === 0 || !data || data.length === 0) {
+    return 'bar';
   }
 
-  // 时间 vs 数值 -> 折线图
-  if (xField.type === 'date' && yField.type === 'number') {
+  const rowCount = data.length;
+  const numericFields = schema.filter(f => f.type === 'number');
+  const dateFields = schema.filter(f => f.type === 'date');
+  const stringFields = schema.filter(f => f.type === 'string');
+  const booleanFields = schema.filter(f => f.type === 'boolean');
+
+  const firstField = schema[0];
+
+  const isCategorical = (t: DataType) => t === 'string' || t === 'boolean';
+
+  const uniqueCount = (colIndex: number): number => {
+    const set = new Set<any>();
+    for (const row of data) {
+      set.add(row[colIndex]);
+    }
+    return set.size;
+  };
+
+
+  if (schema.length >= 3) {
+    const dimIndices: number[] = [];
+    schema.forEach((f, idx) => {
+      if (isCategorical(f.type) || f.type === 'date') dimIndices.push(idx);
+    });
+
+    if (dimIndices.length >= 2 && numericFields.length >= 1) {
+      const [d1, d2] = dimIndices;
+      const combos = new Set(data.map(row => `${row[d1]}__${row[d2]}`)).size;
+      const u1 = uniqueCount(d1);
+      const u2 = uniqueCount(d2);
+      const expected = u1 * u2 || 1;
+      const density = combos / expected;
+
+      if (u1 > 1 && u2 > 1 && u1 <= 24 && u2 <= 24 && density >= 0.6 && rowCount <= 2000) {
+        return 'heatmap';
+      }
+    }
+  }
+
+
+  if (firstField.type === 'date' && numericFields.length >= 1) {
+
+    if (numericFields.length >= 2 && rowCount >= 12) {
+      return 'area'; 
+    }
     return 'line';
   }
 
-  // 分类 vs 数值 -> 柱状图或饼图
-  if (xField.type === 'string' && yField.type === 'number') {
-    // 如果分类数量较少（例如小于等于8个），推荐饼图，否则柱状图更清晰
-    return uniqueXValues <= 8 ? 'pie' : 'bar';
+
+  if (firstField.type === 'number' && numericFields.length >= 2) {
+    if (numericFields.length >= 3 && rowCount <= 2000) {
+      return 'bubble';
+    }
+    return 'scatter';
   }
 
-  // 默认返回柱状图
+  if (isCategorical(firstField.type) && numericFields.length >= 1) {
+    const xIndex = 0;
+    const categoryCount = uniqueCount(xIndex);
+
+    if (numericFields.length >= 3 && categoryCount <= 8 && rowCount <= 50) {
+      return 'radar';
+    }
+
+    if (numericFields.length === 1 && categoryCount > 1 && categoryCount <= 8 && rowCount <= 50) {
+      return 'pie';
+    }
+
+    return 'bar';
+  }
+
+  if (numericFields.length === 1) {
+    if (dateFields.length > 0) {
+      return 'line';
+    }
+    if (stringFields.length > 0 || booleanFields.length > 0) {
+      const dimIndex = schema.findIndex(f => isCategorical(f.type));
+      const catCount = dimIndex >= 0 ? uniqueCount(dimIndex) : rowCount;
+      return catCount <= 8 ? 'pie' : 'bar';
+    }
+  }
+
   return 'bar';
 }

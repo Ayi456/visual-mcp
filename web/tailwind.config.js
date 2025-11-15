@@ -6,7 +6,7 @@ export default {
   ],
   theme: {
     extend: {
-      // 极简优雅字体系统
+      // 优雅字体系统
       fontSize: {
         'xs': ['0.8125rem', { lineHeight: '1.5', letterSpacing: '-0.011em' }],
         'sm': ['0.9375rem', { lineHeight: '1.6', letterSpacing: '-0.011em' }],

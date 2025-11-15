@@ -4,8 +4,8 @@ import {
   UserQuotaInfo,
   CreateUserArgs,
   LoginUserArgs
-} from './types.js';
-import { AuthService, UserService, QuotaService, PasswordResetService } from './services/user/index.js';
+} from '../types.js';
+import { AuthService, UserService, QuotaService, PasswordResetService } from '../services/user/index.js';
 
 /**
  * 用户管理器（外观模式）
